@@ -1,0 +1,68 @@
+### 1. 注册救助者
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "rescuer001",
+  "password": "123456",
+  "realName": "张救助",
+  "phone": "13800138001",
+  "role": "RESCUER"
+}
+
+### 2. 注册领养者
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "adopter001",
+  "password": "123456",
+  "realName": "李领养",
+  "phone": "13800138002",
+  "role": "ADOPTER"
+}
+
+### 3. 注册管理员
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "admin001",
+  "password": "admin123",
+  "realName": "系统管理员",
+  "phone": "13800138000",
+  "role": "ADMIN"
+}
+
+### 4. 登录（领养者）
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "username": "adopter001",
+  "password": "123456"
+}
+
+### 5. 登录（管理员）
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "username": "admin001",
+  "password": "admin123"
+}
+
+### 6. 发布宠物（使用已存在的救助者）
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小狗豆豆",
+  "type": "狗",
+  "gender": "公",
+  "age": 2,
+  "description": "性格温顺，已绝育，健康良好",
+  "rescuer": {
+    "id": 1
+  }
+}
