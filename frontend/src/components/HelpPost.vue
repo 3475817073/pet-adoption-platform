@@ -161,7 +161,6 @@
       </div>
     </el-dialog>
     <!-- 分页组件 -->
-    <!-- 分页组件 -->
     <div v-if="!detailVisible" class="pagination-wrapper">
       <el-pagination
           v-model:current-page="currentPage"
