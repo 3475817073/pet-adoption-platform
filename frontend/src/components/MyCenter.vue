@@ -52,6 +52,22 @@
           </el-col>
         </el-row>
         <el-empty v-else description="还没有发布过宠物哦~" :image-size="150" />
+
+        <!-- 我的发布分页 -->
+        <div class="pagination-wrapper" v-if="publishedPets.length > 0">
+          <el-pagination
+              v-model:current-page="petsCurrentPage"
+              v-model:page-size="petsPageSize"
+              :page-sizes="[4, 8, 16, 32]"
+              :total="petsTotal"
+              layout="total, prev, pager, next, sizes, jumper"
+              :pager-count="5"
+              @size-change="handlePetsSizeChange"
+              @current-change="handlePetsPageChange"
+              background
+              class="custom-pagination"
+          />
+        </div>
       </el-tab-pane>
 
       <!-- 我的申请 -->
@@ -78,7 +94,24 @@
           </el-timeline-item>
         </el-timeline>
         <el-empty v-else description="还没有提交过领养申请哦~" :image-size="150" />
+
+        <!-- 我的申请分页 -->
+        <div class="pagination-wrapper" v-if="myApplications.length > 0">
+          <el-pagination
+              v-model:current-page="appsCurrentPage"
+              v-model:page-size="appsPageSize"
+              :page-sizes="[5, 10, 20, 50]"
+              :total="appsTotal"
+              layout="total, prev, pager, next, sizes, jumper"
+              :pager-count="5"
+              @size-change="handleAppsSizeChange"
+              @current-change="handleAppsPageChange"
+              background
+              class="custom-pagination"
+          />
+        </div>
       </el-tab-pane>
+
     </el-tabs>
 
     <!-- 编辑宠物弹窗 -->
@@ -154,6 +187,15 @@ const editForm = ref({
 })
 const saving = ref(false)
 
+// 分页相关变量
+const petsCurrentPage = ref(1)
+const petsPageSize = ref(8)
+const petsTotal = ref(0)
+const appsCurrentPage = ref(1)
+const appsPageSize = ref(10)
+const appsTotal = ref(0)
+
+
 const getRoleColor = (role) => {
   const colors = { ADMIN: 'danger', RESCUER: 'success', ADOPTER: 'primary' }
   return colors[role] || ''
@@ -208,22 +250,50 @@ const loadUserData = async () => {
     user.value = JSON.parse(userStr)
     const username = user.value.username
 
-    // 加载我的发布
-    const petsRes = await fetch(`http://localhost:8080/api/pet/my-pets?username=${username}`)
+    // 加载我的发布（分页）
+    const petsRes = await fetch(`http://localhost:8080/api/pet/my-pets?username=${username}&page=${petsCurrentPage.value - 1}&size=${petsPageSize.value}`)
     if (petsRes.ok) {
-      publishedPets.value = await petsRes.json()
+      const petsData = await petsRes.json()
+      publishedPets.value = petsData.content
+      petsTotal.value = petsData.totalElements
     }
 
-    // 加载我的申请
-    const appsRes = await fetch(`http://localhost:8080/api/adoption/my-applications?username=${username}`)
+    // 加载我的申请（分页）
+    const appsRes = await fetch(`http://localhost:8080/api/adoption/my-applications?username=${username}&page=${appsCurrentPage.value - 1}&size=${appsPageSize.value}`)
     if (appsRes.ok) {
-      myApplications.value = await appsRes.json()
+      const appsData = await appsRes.json()
+      myApplications.value = appsData.content
+      appsTotal.value = appsData.totalElements
     }
   } catch (error) {
     ElMessage.error('加载数据失败')
     console.error(error)
   }
 }
+
+// 分页处理方法
+const handlePetsPageChange = (page) => {
+  petsCurrentPage.value = page
+  loadUserData()
+}
+
+const handlePetsSizeChange = (size) => {
+  petsPageSize.value = size
+  petsCurrentPage.value = 1
+  loadUserData()
+}
+
+const handleAppsPageChange = (page) => {
+  appsCurrentPage.value = page
+  loadUserData()
+}
+
+const handleAppsSizeChange = (size) => {
+  appsPageSize.value = size
+  appsCurrentPage.value = 1
+  loadUserData()
+}
+
 
 const editPet = (pet) => {
   editingPet.value = pet
@@ -528,4 +598,76 @@ onMounted(() => {
   background: #D06A4F !important;
 }
 
+.save-btn:hover {
+  background: #D06A4F !important;
+}
+
+.pagination-wrapper {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.custom-pagination :deep(.el-pagination__total) {
+  font-size: 14px;
+  color: #6B7280;
+  margin-right: 20px;
+}
+
+.custom-pagination :deep(.el-pagination__sizes) {
+  margin: 0 15px;
+}
+
+.custom-pagination :deep(.el-pagination__jump) {
+  margin-left: 20px;
+}
+
+.custom-pagination :deep(.el-pager li) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.el-pager li.active) {
+  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.custom-pagination :deep(.el-pager li:hover:not(.active)) {
+  background-color: #FDF8F3;
+  color: #E07A5F;
+}
+
+.custom-pagination :deep(.btn-prev),
+.custom-pagination :deep(.btn-next) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  padding: 0;
+  border: 1px solid #E5E7EB;
+  background: white;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.btn-prev:hover),
+.custom-pagination :deep(.btn-next:hover) {
+  color: #E07A5F;
+  border-color: #E07A5F;
+}
+
+.custom-pagination :deep(.el-select) {
+  --el-select-border-radius-hover: 8px;
+}
+
+.custom-pagination :deep(.el-input__wrapper) {
+  border-radius: 8px;
+}
 </style>

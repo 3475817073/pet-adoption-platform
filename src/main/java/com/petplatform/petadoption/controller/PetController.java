@@ -8,6 +8,10 @@ import com.petplatform.petadoption.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Map;
@@ -57,8 +61,11 @@ public class PetController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<Pet>> listAvailable() {
-        return ResponseEntity.ok(petService.findAllAvailable());
+    public ResponseEntity<Page<Pet>> listAvailable(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+        return ResponseEntity.ok(petService.findAvailablePage(pageable));
     }
 
 
@@ -69,18 +76,15 @@ public class PetController {
     }
 
     @GetMapping("/my-pets")
-    public ResponseEntity<?> getMyPets(@RequestParam String username) {
-        try {
-            User rescuer = userService.findByUsername(username);
-            if (rescuer == null) {
-                return ResponseEntity.badRequest().body("用户不存在");
-            }
-            List<Pet> pets = petService.findByRescuerId(rescuer.getId());
-            return ResponseEntity.ok(pets);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
-        }
+    public ResponseEntity<Page<Pet>> getMyPets(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+        User rescuer = userService.findByUsername(username);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+        return ResponseEntity.ok(petService.findMyPetsPage(rescuer.getId(), pageable));
     }
+
 
     // 编辑宠物信息
     @PutMapping("/{id}")

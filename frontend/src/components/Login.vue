@@ -109,12 +109,6 @@
                 prefix-icon="Phone"
                 class="custom-input" />
           </el-form-item>
-          <el-form-item>
-            <el-select v-model="registerForm.role" style="width: 100%" size="large" class="custom-select">
-              <el-option label="🐾 领养者" value="ADOPTER" />
-              <el-option label="💕 救助者" value="RESCUER" />
-            </el-select>
-          </el-form-item>
           <el-button style="width:100%" type="primary" @click="doRegister" :loading="registerLoading" class="submit-btn">
             注册
           </el-button>
@@ -140,13 +134,14 @@ const emit = defineEmits(['update:modelValue', 'loginSuccess'])
 
 const tab = ref('login')
 const loginForm = ref({ username: '', password: '' })
+
 const registerForm = ref({
   username: '',
   password: '',
   confirmPassword: '',
   realName: '',
   phone: '',
-  role: 'ADOPTER'
+  // role: 'ADOPTER'
 })
 
 const loginLoading = ref(false)
@@ -220,8 +215,8 @@ const doRegister = async () => {
         password: '',
         confirmPassword: '',
         realName: '',
-        phone: '',
-        role: 'ADOPTER'
+        phone: ''
+        // role: 'ADOPTER'
       }
       tab.value = 'login'
     } else {

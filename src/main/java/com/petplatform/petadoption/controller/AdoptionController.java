@@ -7,6 +7,10 @@ import com.petplatform.petadoption.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,13 +40,14 @@ public class AdoptionController {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
-            // 验证是否为领养者
-            if (adopter.getRole() != Role.ADOPTER) {
-                return ResponseEntity.badRequest().body("只有领养者可以提交申请");
-            }
+            // Deleted:// 验证是否为领养者
+            // Deleted:if (adopter.getRole() != Role.ADOPTER) {
+            // Deleted:    return ResponseEntity.badRequest().body("只有领养者可以提交申请");
+            // Deleted:}
 
             Long petId = Long.valueOf(request.get("petId").toString());
             Pet pet = petService.findById(petId);
+
             if (pet == null) {
                 return ResponseEntity.badRequest().body("宠物不存在");
             }
@@ -70,50 +75,62 @@ public class AdoptionController {
 
     // 查询我的申请（领养者）
     @GetMapping("/my-applications")
-    public ResponseEntity<?> getMyApplications(@RequestParam String username) {
+    public ResponseEntity<Page<AdoptionApplication>> getMyApplications(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User user = userService.findByUsername(username);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "applyTime"));
+        return ResponseEntity.ok(adoptionApplicationService.findMyApplicationsPage(user.getId(), pageable));
+    }
+
+
+    // 查看所有申请（仅管理员）
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllApplications(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
             User user = userService.findByUsername(username);
             if (user == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
-            List<AdoptionApplication> applications = adoptionApplicationService.findByAdopterId(user.getId());
-            return ResponseEntity.ok(applications);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body("查询失败");
-        }
-    }
-
-    // 查看所有申请（仅管理员）
-    @GetMapping("/all")
-    public ResponseEntity<?> getAllApplications(@RequestParam String username) {
-        try {
-            User user = userService.findByUsername(username);
-            if (user == null || user.getRole() != Role.ADMIN) {
+            if (user.getRole() != Role.ADMIN) {
                 return ResponseEntity.badRequest().body("无权限访问");
             }
-            List<AdoptionApplication> applications = adoptionApplicationService.findAll();
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "applyTime"));
+            Page<AdoptionApplication> applications = adoptionApplicationService.findAllPage(pageable);
             return ResponseEntity.ok(applications);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("查询失败");
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
         }
     }
 
     // 查看待审核申请（仅管理员）
     @GetMapping("/pending")
-    public ResponseEntity<?> getPendingApplications(@RequestParam String username) {
+    public ResponseEntity<?> getPendingApplications(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
             User user = userService.findByUsername(username);
-            if (user == null || user.getRole() != Role.ADMIN) {
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
                 return ResponseEntity.badRequest().body("无权限访问");
             }
-            List<AdoptionApplication> applications = adoptionApplicationService.findByStatus(ApplicationStatus.PENDING);
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "applyTime"));
+            Page<AdoptionApplication> applications = adoptionApplicationService.findPendingPage(pageable);
             return ResponseEntity.ok(applications);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("查询失败");
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
         }
     }
 
-    // 审核申请（仅管理员）
+
+    // 审核申请
     @PostMapping("/review/{applicationId}")
     public ResponseEntity<?> review(
             @PathVariable Long applicationId,
@@ -122,8 +139,8 @@ public class AdoptionController {
 
         try {
             User admin = userService.findByUsername(username);
-            if (admin == null || admin.getRole() != Role.ADMIN) {
-                return ResponseEntity.badRequest().body("无权限审核");
+            if (admin == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
             }
 
             AdoptionApplication application = adoptionApplicationService.findById(applicationId);

@@ -9,7 +9,10 @@ import com.petplatform.petadoption.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,8 +28,11 @@ public class HelpPostController {
     private final CommentService commentService;
 
     @GetMapping("/list")
-    public ResponseEntity<List<HelpPost>> list() {
-        return ResponseEntity.ok(helpPostService.findAll());
+    public ResponseEntity<Page<HelpPost>> list(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+        return ResponseEntity.ok(helpPostService.findPage(pageable));
     }
 
     @PostMapping("/publish")
@@ -86,9 +92,11 @@ public class HelpPostController {
 
             return ResponseEntity.ok(result);
         } catch (Exception e) {
+            e.printStackTrace(); // 打印详细日志以便排查
             return ResponseEntity.badRequest().body("查询评论失败：" + e.getMessage());
         }
     }
+
 
     @PostMapping("/comment")
     public ResponseEntity<?> addComment(@RequestBody Map<String, Object> request) {

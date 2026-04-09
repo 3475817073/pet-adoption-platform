@@ -160,10 +160,57 @@
         </el-input>
       </div>
     </el-dialog>
+    <!-- 分页组件 -->
+    <!-- 分页组件 -->
+    <div v-if="!detailVisible" class="pagination-wrapper">
+      <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[5, 10, 20, 50]"
+          :total="total"
+          layout="total, prev, pager, next, sizes, jumper"
+          :pager-count="5"
+          @size-change="handleSizeChange"
+          @current-change="handlePageChange"
+          background
+          class="custom-pagination"
+      />
+    </div>
+
+
+
   </div>
+  <!-- 发布互助帖弹窗 -->
+  <el-dialog
+      v-model="publishVisible"
+      title="发布互助帖"
+      width="600px"
+  >
+    <el-form :model="postForm" label-width="80px">
+      <el-form-item label="分类">
+        <el-select v-model="postForm.category" placeholder="请选择分类">
+          <el-option label="物资共享" value="物资共享" />
+          <el-option label="医疗咨询" value="医疗咨询" />
+          <el-option label="经验分享" value="经验分享" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="标题">
+        <el-input v-model="postForm.title" placeholder="请输入标题" />
+      </el-form-item>
+      <el-form-item label="内容">
+        <el-input v-model="postForm.content" type="textarea" :rows="6" placeholder="请输入内容" />
+      </el-form-item>
+    </el-form>
+    <template #footer>
+      <el-button @click="publishVisible = false">取消</el-button>
+      <el-button type="primary" @click="submitPost" :loading="loading">发布</el-button>
+    </template>
+  </el-dialog>
+
 </template>
 
 <script setup>
+
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -227,6 +274,12 @@ const replyBoxType = ref('')
 const replyText = ref('')
 const expandedReplies = ref({})
 
+const currentPage = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const jumpPage = ref(1)
+
+
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
@@ -281,13 +334,16 @@ onMounted(async () => {
 })
 
 const loadPostsFromServer = async () => {
+  loading.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/help/list')
+    const res = await fetch(`http://localhost:8080/api/help/list?page=${currentPage.value - 1}&size=${pageSize.value}`)
     if (res.ok) {
-      const postsData = await res.json()
+      const data = await res.json()
+      posts.value = data.content
+      total.value = data.totalElements
 
       const postsWithComments = await Promise.all(
-          postsData.map(async (post) => {
+          posts.value.map(async (post) => {
             try {
               const commentRes = await fetch(`http://localhost:8080/api/help/comments/${post.id}`)
               if (commentRes.ok) {
@@ -303,13 +359,35 @@ const loadPostsFromServer = async () => {
 
       posts.value = postsWithComments
     } else {
-      ElMessage.error('加载帖子失败')
+      const errorText = await res.text()
+      ElMessage.error('加载帖子失败：' + errorText)
     }
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error('网络错误：' + error.message)
     console.error(error)
+  } finally {
+    loading.value = false
   }
 }
+
+const handlePageChange = (page) => {
+  currentPage.value = page
+  loadPostsFromServer()
+}
+
+const handleSizeChange = (size) => {
+  pageSize.value = size
+  currentPage.value = 1
+  loadPostsFromServer()
+}
+
+const handleJumpPage = () => {
+  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= Math.ceil(total.value / pageSize.value)) {
+    currentPage.value = jumpPage.value
+    loadPostsFromServer()
+  }
+}
+
 
 const showPublishDialog = () => {
   if (!localStorage.getItem('user')) {
@@ -358,19 +436,10 @@ const submitPost = async () => {
   }
 }
 
-const showPostDetail = async (row) => {
-  currentPost.value = row
-  checkLoginStatus()
-  comments.value = []
-  newComment.value = ''
-  replyBoxIndex.value = -1
-  replyBoxReplyId.value = -1
-  replyBoxType.value = ''
-  replyText.value = ''
-  expandedReplies.value = {}
+const showDetail = async (post) => {
+  currentPost.value = post
   detailVisible.value = true
-
-  await loadComments(row.id)
+  await loadComments(post.id)
 }
 
 const loadComments = async (postId) => {
@@ -378,202 +447,139 @@ const loadComments = async (postId) => {
   try {
     const res = await fetch(`http://localhost:8080/api/help/comments/${postId}`)
     if (res.ok) {
-      comments.value = await res.json()
+      const data = await res.json()
+      comments.value = data
     } else {
-      ElMessage.error('加载评论失败')
+      comments.value = []
     }
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error('加载评论失败')
+    comments.value = []
   } finally {
     commentsLoading.value = false
   }
 }
 
 const submitComment = async () => {
-  if (!newComment.value.trim()) return
-  const user = getCurrentUser()
-  if (!user) {
-    ElMessage.warning('请先登录才能发表评论')
+  if (!newComment.value.trim()) {
+    ElMessage.warning('请输入评论内容')
+    return
+  }
+
+  if (!localStorage.getItem('user')) {
+    ElMessage.warning('请先登录才能评论')
     emit('needLogin')
     return
   }
 
+  const user = getCurrentUser()
   try {
     const res = await fetch('http://localhost:8080/api/help/comment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: user.username,
         postId: currentPost.value.id,
+        username: user.username,
         content: newComment.value
       })
     })
 
     if (res.ok) {
-      ElMessage.success('评论成功！')
+      ElMessage.success('评论成功')
       newComment.value = ''
       await loadComments(currentPost.value.id)
+      await loadPostsFromServer()
     } else {
       ElMessage.error(await res.text())
     }
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error('评论失败')
   }
 }
 
-const showMainReplyBox = (comment) => {
-  const index = comments.value.findIndex(c => c.id === comment.id)
-  if (replyBoxIndex.value === index && replyBoxType.value === 'main') {
-    replyBoxIndex.value = -1
-    replyBoxType.value = ''
-  } else {
-    replyBoxIndex.value = index
-    replyBoxReplyId.value = -1
-    replyBoxType.value = 'main'
+const submitReply = async (commentId, type) => {
+  if (!replyText.value.trim()) {
+    ElMessage.warning('请输入回复内容')
+    return
   }
-  replyText.value = ''
-  nextTick(() => {
-    const input = document.querySelectorAll('.reply-input-box input')[0]
-    if (input) input.focus()
-  })
-}
 
-const showReplyReplyBox = (commentIndex, reply) => {
-  if (replyBoxIndex.value === commentIndex && replyBoxReplyId.value === reply.id && replyBoxType.value === 'reply') {
-    replyBoxIndex.value = -1
-    replyBoxType.value = ''
-  } else {
-    replyBoxIndex.value = commentIndex
-    replyBoxReplyId.value = reply.id
-    replyBoxType.value = 'reply'
+  if (!localStorage.getItem('user')) {
+    ElMessage.warning('请先登录才能回复')
+    emit('needLogin')
+    return
   }
-  replyText.value = ''
-  nextTick(() => {
-    const inputs = document.querySelectorAll('.reply-input-box input')
-    if (inputs.length > 0) {
-      inputs[inputs.length - 1].focus()
-    }
-  })
-}
 
-const submitReplyToMain = async (parentId) => {
-  if (!replyText.value.trim()) return
   const user = getCurrentUser()
-  if (!user) return
-
   try {
-    const res = await fetch('http://localhost:8080/api/help/comment', {
+    const res = await fetch('http://localhost:8080/api/help/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: user.username,
         postId: currentPost.value.id,
-        parentId: parentId,
-        content: replyText.value
+        username: user.username,
+        content: replyText.value,
+        parentCommentId: commentId,
+        replyToCommentId: type === 'reply' ? null : replyBoxReplyId.value
       })
     })
 
     if (res.ok) {
-      ElMessage.success('回复成功！')
-      replyBoxIndex.value = -1
-      replyBoxType.value = ''
+      ElMessage.success('回复成功')
       replyText.value = ''
-      await loadComments(currentPost.value.id)
-    } else {
-      ElMessage.error(await res.text())
-    }
-  } catch (error) {
-    ElMessage.error('网络错误')
-  }
-}
-
-const submitReplyToReply = async (parentId, replyId) => {
-  if (!replyText.value.trim()) return
-  const user = getCurrentUser()
-  if (!user) return
-
-  try {
-    const res = await fetch('http://localhost:8080/api/help/comment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: user.username,
-        postId: currentPost.value.id,
-        parentId: replyId,
-        content: replyText.value
-      })
-    })
-
-    if (res.ok) {
-      ElMessage.success('回复成功！')
       replyBoxIndex.value = -1
       replyBoxReplyId.value = -1
       replyBoxType.value = ''
-      replyText.value = ''
       await loadComments(currentPost.value.id)
     } else {
       ElMessage.error(await res.text())
     }
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error('回复失败')
   }
 }
 
-const getVisibleReplies = (comment, index) => {
-  return expandedReplies.value[index] ? comment.replies : comment.replies.slice(0, 3)
+const toggleReplies = (commentId) => {
+  expandedReplies.value[commentId] = !expandedReplies.value[commentId]
 }
 
-const deleteMainComment = (commentId) => {
-  ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' }).then(async () => {
-    try {
-      const user = getCurrentUser()
-      const res = await fetch(`http://localhost:8080/api/help/comment/${commentId}?username=${user.username}`, {
+const showReplyBox = (index, type, replyId = -1) => {
+  replyBoxIndex.value = index
+  replyBoxType.value = type
+  replyBoxReplyId.value = replyId
+  replyText.value = ''
+}
+
+const cancelReply = () => {
+  replyBoxIndex.value = -1
+  replyBoxReplyId.value = -1
+  replyBoxType.value = ''
+  replyText.value = ''
+}
+
+const deleteComment = async (commentId) => {
+  try {
+    ElMessageBox.confirm('确定要删除这条评论吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }).then(async () => {
+      const res = await fetch(`http://localhost:8080/api/help/comment/${commentId}`, {
         method: 'DELETE'
       })
-
       if (res.ok) {
-        ElMessage.success('已删除')
+        ElMessage.success('删除成功')
         await loadComments(currentPost.value.id)
+        await loadPostsFromServer()
       } else {
         ElMessage.error(await res.text())
       }
-    } catch (error) {
-      ElMessage.error('删除失败')
-    }
-  }).catch(() => {})
+    }).catch(() => {})
+  } catch (error) {
+    ElMessage.error('删除失败')
+  }
 }
-
-const deleteReply = (replyId) => {
-  ElMessageBox.confirm('确定删除？', '提示', { type: 'warning' }).then(async () => {
-    try {
-      const user = getCurrentUser()
-      const res = await fetch(`http://localhost:8080/api/help/comment/${replyId}?username=${user.username}`, {
-        method: 'DELETE'
-      })
-
-      if (res.ok) {
-        ElMessage.success('已删除')
-        await loadComments(currentPost.value.id)
-      } else {
-        ElMessage.error(await res.text())
-      }
-    } catch (error) {
-      ElMessage.error('删除失败')
-    }
-  }).catch(() => {})
-}
-
-const toggleExpand = (index) => {
-  expandedReplies.value[index] = !expandedReplies.value[index]
-}
-
-const handleNeedLogin = () => {
-  detailVisible.value = false
-  emit('needLogin')
-}
-
-window.addEventListener('storage', () => { checkLoginStatus() })
 </script>
+
 
 <style scoped>
 .filter-section {
@@ -644,4 +650,76 @@ window.addEventListener('storage', () => { checkLoginStatus() })
 .reply-item { margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #E5E7EB; }
 .reply-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .reply-to { color: #81B29A; font-size: 12px; }
+
+.reply-to { color: #81B29A; font-size: 12px; }
+
+.pagination-wrapper {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.custom-pagination :deep(.el-pagination__total) {
+  font-size: 14px;
+  color: #6B7280;
+  margin-right: 20px;
+}
+
+.custom-pagination :deep(.el-pagination__sizes) {
+  margin: 0 15px;
+}
+
+.custom-pagination :deep(.el-pagination__jump) {
+  margin-left: 20px;
+}
+
+.custom-pagination :deep(.el-pager li) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.el-pager li.active) {
+  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.custom-pagination :deep(.el-pager li:hover:not(.active)) {
+  background-color: #FDF8F3;
+  color: #E07A5F;
+}
+
+.custom-pagination :deep(.btn-prev),
+.custom-pagination :deep(.btn-next) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  padding: 0;
+  border: 1px solid #E5E7EB;
+  background: white;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.btn-prev:hover),
+.custom-pagination :deep(.btn-next:hover) {
+  color: #E07A5F;
+  border-color: #E07A5F;
+}
+
+.custom-pagination :deep(.el-select) {
+  --el-select-border-radius-hover: 8px;
+}
+
+.custom-pagination :deep(.el-input__wrapper) {
+  border-radius: 8px;
+}
 </style>
+

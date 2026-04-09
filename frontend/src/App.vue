@@ -60,10 +60,6 @@
           </span>
         </div>
         <div style="display: flex; align-items: center; gap: 12px">
-          <div v-if="isLoggedIn && userRole === 'ADMIN'" class="role-badge admin">管理员</div>
-          <div v-else-if="isLoggedIn && userRole === 'RESCUER'" class="role-badge rescuer">救助者</div>
-          <div v-else-if="isLoggedIn && userRole === 'ADOPTER'" class="role-badge adopter">领养者</div>
-
 
           <el-button v-if="!isLoggedIn" type="primary" @click="showLoginDialog"
                      class="login-btn">
@@ -165,6 +161,8 @@ const showLoginDialog = () => {
 }
 </script>
 
+<!-- ... existing code ... -->
+
 <style>
 .sidebar-bg {
   position: absolute;
@@ -221,17 +219,15 @@ const showLoginDialog = () => {
   font-size: 13px;
   font-weight: 500;
 }
+
 .role-badge.admin {
   background: #E07A5F;
   color: white;
 }
-.role-badge.rescuer {
+
+.role-badge.user {
   background: #81B29A;
   color: white;
-}
-.role-badge.adopter {
-  background: #F2CC8F;
-  color: #3D405B;
 }
 
 .login-btn {
@@ -247,3 +243,4 @@ const showLoginDialog = () => {
   font-weight: 500;
 }
 </style>
+

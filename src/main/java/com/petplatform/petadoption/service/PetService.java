@@ -4,6 +4,8 @@ import com.petplatform.petadoption.entity.Pet;
 import com.petplatform.petadoption.entity.PetStatus;
 import com.petplatform.petadoption.repository.PetRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -32,5 +34,12 @@ public class PetService {
         petRepository.delete(pet);
     }
 
+    public Page<Pet> findAvailablePage(Pageable pageable) {
+        return petRepository.findByStatus(PetStatus.AVAILABLE, pageable);
+    }
+
+    public Page<Pet> findMyPetsPage(Long rescuerId, Pageable pageable) {
+        return petRepository.findByRescuerId(rescuerId, pageable);
+    }
 
 }

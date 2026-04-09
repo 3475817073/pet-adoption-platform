@@ -4,6 +4,8 @@ import com.petplatform.petadoption.entity.AdoptionApplication;
 import com.petplatform.petadoption.entity.ApplicationStatus;
 import com.petplatform.petadoption.repository.AdoptionApplicationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 
@@ -35,4 +37,17 @@ public class AdoptionApplicationService {
     public AdoptionApplication findById(Long id) {
         return applicationRepository.findById(id).orElse(null);
     }
+
+    public Page<AdoptionApplication> findPendingPage(Pageable pageable) {
+        return applicationRepository.findByStatus(ApplicationStatus.PENDING, pageable);
+    }
+
+    public Page<AdoptionApplication> findAllPage(Pageable pageable) {
+        return applicationRepository.findAll(pageable);
+    }
+
+    public Page<AdoptionApplication> findMyApplicationsPage(Long adopterId, Pageable pageable) {
+        return applicationRepository.findByAdopterId(adopterId, pageable);
+    }
+
 }

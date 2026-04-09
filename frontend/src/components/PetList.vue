@@ -47,7 +47,7 @@
 
     <!-- 宠物卡片 -->
     <el-row :gutter="20">
-      <el-col v-for="pet in filteredPets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" style="margin-bottom: 20px">
+      <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" style="margin-bottom: 20px">
         <el-card class="pet-card" shadow="never">
           <div class="image-container" @click="showDetail(pet)">
             <img v-if="getPetImageUrl(pet)" :src="getPetImageUrl(pet)" class="pet-image" />
@@ -78,9 +78,28 @@
       </el-col>
     </el-row>
 
-    <el-empty v-if="filteredPets.length === 0" description="暂无符合条件的宠物" :image-size="200" />
+    <!-- 分页组件 -->
+    <!-- 分页组件 -->
+    <div class="pagination-wrapper">
+      <el-pagination
+          v-model:current-page="currentPage"
+          v-model:page-size="pageSize"
+          :page-sizes="[6, 12, 24, 48]"
+          :total="total"
+          layout="total, prev, pager, next, sizes, jumper"
+          :pager-count="5"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          background
+          class="custom-pagination"
+      />
+    </div>
+
+
+    <el-empty v-if="pets.length === 0 && !loading" description="暂无符合条件的宠物" :image-size="200" />
 
     <!-- 宠物详情弹窗 -->
+
     <el-dialog v-model="detailVisible" :title="selectedPet?.name" width="700px">
       <div v-if="selectedPet" class="pet-detail-container">
         <div class="detail-images">
@@ -135,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
 
@@ -149,33 +168,59 @@ const filterAge = ref('')
 const applyDialogVisible = ref(false)
 const selectedPet = ref(null)
 const detailVisible = ref(false)
+const loading = ref(false)
+
+const currentPage = ref(1)
+const pageSize = ref(12)
+const total = ref(0)
+const jumpPage = ref(1)
 
 
-const filteredPets = computed(() => {
-  return pets.value.filter(pet => {
-    const matchSearch = !searchKeyword.value || pet.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-    const matchType = !filterType.value || pet.type === filterType.value
-    const matchGender = !filterGender.value || pet.gender === filterGender.value
 
-    let matchAge = true
-    if (filterAge.value === 'young') matchAge = pet.age < 1
-    else if (filterAge.value === 'adult') matchAge = pet.age >= 1 && pet.age <= 3
-    else if (filterAge.value === 'senior') matchAge = pet.age > 3
 
-    return matchSearch && matchType && matchGender && matchAge
-  })
-})
+const loadPets = async () => {
+  loading.value = true
+  try {
+    const res = await fetch(`http://localhost:8080/api/pet/list?page=${currentPage.value - 1}&size=${pageSize.value}`)
+    if (res.ok) {
+      const data = await res.json()
+      pets.value = data.content
+      total.value = data.totalElements
+    } else {
+      ElMessage.error('获取宠物列表失败')
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  } finally {
+    loading.value = false
+  }
+}
 
 onMounted(() => {
-  fetch('http://localhost:8080/api/pet/list')
-      .then(res => res.json())
-      .then(data => pets.value = data)
-      .catch(() => {
-        ElMessage.error('获取宠物列表失败')
-      })
+  loadPets()
 })
 
+const handleSizeChange = (newSize) => {
+  pageSize.value = newSize
+  currentPage.value = 1
+  loadPets()
+}
+
+const handleCurrentChange = (newPage) => {
+  currentPage.value = newPage
+  loadPets()
+}
+
+const handleJumpPage = () => {
+  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= Math.ceil(total.value / pageSize.value)) {
+    currentPage.value = jumpPage.value
+    loadPets()
+  }
+}
+
+
 const showDetail = (pet) => {
+
   selectedPet.value = pet
   try {
     if (pet.photoUrls) {
@@ -474,4 +519,75 @@ const resetFilter = () => {
   white-space: pre-wrap;
 }
 
+.reply-to { color: #81B29A; font-size: 12px; }
+
+.pagination-wrapper {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.custom-pagination :deep(.el-pagination__total) {
+  font-size: 14px;
+  color: #6B7280;
+  margin-right: 20px;
+}
+
+.custom-pagination :deep(.el-pagination__sizes) {
+  margin: 0 15px;
+}
+
+.custom-pagination :deep(.el-pagination__jump) {
+  margin-left: 20px;
+}
+
+.custom-pagination :deep(.el-pager li) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  margin: 0 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.el-pager li.active) {
+  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+.custom-pagination :deep(.el-pager li:hover:not(.active)) {
+  background-color: #FDF8F3;
+  color: #E07A5F;
+}
+
+.custom-pagination :deep(.btn-prev),
+.custom-pagination :deep(.btn-next) {
+  min-width: 36px;
+  height: 36px;
+  line-height: 36px;
+  border-radius: 8px;
+  padding: 0;
+  border: 1px solid #E5E7EB;
+  background: white;
+  transition: all 0.3s;
+}
+
+.custom-pagination :deep(.btn-prev:hover),
+.custom-pagination :deep(.btn-next:hover) {
+  color: #E07A5F;
+  border-color: #E07A5F;
+}
+
+.custom-pagination :deep(.el-select) {
+  --el-select-border-radius-hover: 8px;
+}
+
+.custom-pagination :deep(.el-input__wrapper) {
+  border-radius: 8px;
+}
 </style>
+

@@ -24,13 +24,19 @@ public class UserController {
         if (userService.existsByUsername(user.getUsername())) {
             return ResponseEntity.badRequest().body("用户名已存在！");
         }
-        // 简单设置默认角色（前端传 role）
-        if (user.getRole() == null) {
-            user.setRole(Role.ADOPTER);  // 默认领养者
-        }
+
+        // Deleted:// 简单设置默认角色（前端传 role）
+        // Deleted:if (user.getRole() == null) {
+        // Deleted:    user.setRole(Role.ADOPTER);  // 默认领养者
+        // Deleted:}
+
+        // 统一设置为普通用户
+        user.setRole(Role.USER);
+
         User saved = userService.save(user);
         return ResponseEntity.ok("注册成功！你的ID是：" + saved.getId());
     }
+
 
     // 登录
     @PostMapping("/login")
