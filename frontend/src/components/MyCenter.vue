@@ -197,14 +197,15 @@ const appsTotal = ref(0)
 
 
 const getRoleColor = (role) => {
-  const colors = { ADMIN: 'danger', RESCUER: 'success', ADOPTER: 'primary' }
+  const colors = { ADMIN: 'danger', USER: 'info' }
   return colors[role] || ''
 }
 
 const getRoleText = (role) => {
-  const texts = { ADMIN: '管理员', RESCUER: '救助者', ADOPTER: '领养者' }
+  const texts = { ADMIN: '管理员', USER: '普通用户' }
   return texts[role] || '未知'
 }
+
 
 const getStatusColor = (status) => {
   const colors = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
