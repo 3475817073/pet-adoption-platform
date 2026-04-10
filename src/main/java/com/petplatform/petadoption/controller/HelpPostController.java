@@ -30,10 +30,13 @@ public class HelpPostController {
     @GetMapping("/list")
     public ResponseEntity<Page<HelpPost>> list(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "newest") String sortBy) {
+        Sort.Direction direction = "oldest".equals(sortBy) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "createTime"));
         return ResponseEntity.ok(helpPostService.findPage(pageable));
     }
+
 
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {

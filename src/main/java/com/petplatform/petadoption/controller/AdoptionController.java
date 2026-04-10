@@ -40,10 +40,6 @@ public class AdoptionController {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
-            // Deleted:// 验证是否为领养者
-            // Deleted:if (adopter.getRole() != Role.ADOPTER) {
-            // Deleted:    return ResponseEntity.badRequest().body("只有领养者可以提交申请");
-            // Deleted:}
 
             Long petId = Long.valueOf(request.get("petId").toString());
             Pet pet = petService.findById(petId);
@@ -64,6 +60,16 @@ public class AdoptionController {
             application.setContact((String) request.get("contact"));
             application.setStatus(ApplicationStatus.PENDING);
             application.setApplyTime(LocalDateTime.now());
+
+            // 新增字段处理
+            application.setResidenceType((String) request.get("residenceType"));
+            application.setHousingArea(request.get("housingArea") != null
+                    ? Integer.valueOf(request.get("housingArea").toString())
+                    : null);
+            application.setPetExperience((String) request.get("petExperience"));
+            application.setHasOtherPets(Boolean.valueOf(request.get("hasOtherPets").toString()));
+            application.setOtherPetsInfo((String) request.get("otherPetsInfo"));
+
 
             adoptionApplicationService.save(application);
 

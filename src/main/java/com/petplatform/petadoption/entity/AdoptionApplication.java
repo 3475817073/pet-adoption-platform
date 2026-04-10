@@ -26,4 +26,11 @@ public class AdoptionApplication {
     private String contact;
     private LocalDateTime applyTime = LocalDateTime.now();
     private LocalDateTime reviewTime;
+    //新增字段
+    private String residenceType; // 居住类型（自有/租房/宿舍）
+    private Integer housingArea;  // 住房面积（㎡）
+    private String petExperience; // 养宠经验（无/有过/丰富）
+    private Boolean hasOtherPets; // 是否有其他宠物
+    private String otherPetsInfo; // 其他宠物详细信息（可选）
+
 }

@@ -44,47 +44,6 @@
         </el-empty>
       </el-tab-pane>
 
-      <el-tab-pane v-if="currentUser?.role === 'RESCUER'" label="我的宠物被申请" name="received">
-        <el-table :data="receivedApplications" style="width: 100%" v-loading="loading">
-          <el-table-column prop="id" label="ID" width="80" />
-          <el-table-column label="宠物" width="180">
-            <template #default="{ row }">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <img v-if="row.pet.photoUrl" :src="row.pet.photoUrl" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px" />
-                <div v-else style="width: 50px; height: 50px; background: #f5f7fa; border-radius: 8px; display: flex; align-items: center; justify-content: center">🐾</div>
-                <div>
-                  <div style="font-weight: 500">{{ row.pet.name }}</div>
-                  <div style="font-size: 12px; color: #999">{{ row.pet.type }} · {{ row.pet.gender }}</div>
-                </div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="申请人" width="150">
-            <template #default="{ row }">
-              <div>
-                <div style="font-weight: 500">{{ row.adopter.username }}</div>
-                <div style="font-size: 12px; color: #999">{{ row.adopter.realName }}</div>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="reason" label="领养理由" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="contact" label="联系方式" width="150" />
-          <el-table-column label="状态" width="120">
-            <template #default="{ row }">
-              <el-tag :type="getStatusType(row.status)" effect="dark">
-                {{ getStatusText(row.status) }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column prop="applyTime" label="申请时间" width="180">
-            <template #default="{ row }">
-              {{ formatTime(row.applyTime) }}
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <el-empty v-if="receivedApplications.length === 0" description="还没有人申请你的宠物" :image-size="150" />
-      </el-tab-pane>
     </el-tabs>
   </div>
 </template>

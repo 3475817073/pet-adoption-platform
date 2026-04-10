@@ -87,7 +87,7 @@
           :page-sizes="[6, 12, 24, 48]"
           :total="total"
           layout="total, prev, pager, next, sizes, jumper"
-          :pager-count="5"
+          :pager-count="7"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
           background
@@ -157,6 +157,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
+import { get } from '../utils/request.js'
 
 const emit = defineEmits(['needLogin'])
 
@@ -181,16 +182,14 @@ const jumpPage = ref(1)
 const loadPets = async () => {
   loading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/pet/list?page=${currentPage.value - 1}&size=${pageSize.value}`)
-    if (res.ok) {
-      const data = await res.json()
-      pets.value = data.content
-      total.value = data.totalElements
-    } else {
-      ElMessage.error('获取宠物列表失败')
-    }
+    const data = await get('/api/pet/list', {
+      page: currentPage.value - 1,
+      size: pageSize.value
+    })
+    pets.value = data.content
+    total.value = data.totalElements
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error(error.message || '获取宠物列表失败')
   } finally {
     loading.value = false
   }
@@ -290,6 +289,7 @@ const resetFilter = () => {
   filterAge.value = ''
 }
 </script>
+
 
 <style scoped>
 .pet-card {

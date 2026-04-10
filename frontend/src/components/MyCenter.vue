@@ -61,7 +61,7 @@
               :page-sizes="[4, 8, 16, 32]"
               :total="petsTotal"
               layout="total, prev, pager, next, sizes, jumper"
-              :pager-count="5"
+              :pager-count="7"
               @size-change="handlePetsSizeChange"
               @current-change="handlePetsPageChange"
               background
@@ -103,7 +103,7 @@
               :page-sizes="[5, 10, 20, 50]"
               :total="appsTotal"
               layout="total, prev, pager, next, sizes, jumper"
-              :pager-count="5"
+              :pager-count="7"
               @size-change="handleAppsSizeChange"
               @current-change="handleAppsPageChange"
               background

@@ -16,6 +16,16 @@
               {{ row.adopter.username }}
             </template>
           </el-table-column>
+          <el-table-column label="居住类型" width="100">
+            <template #default="{ row }">{{ row.residenceType || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="住房面积" width="100">
+            <template #default="{ row }">{{ row.housingArea ? row.housingArea + '㎡' : '-' }}</template>
+          </el-table-column>
+          <el-table-column label="养宠经验" width="120">
+            <template #default="{ row }">{{ row.petExperience || '-' }}</template>
+          </el-table-column>
+
           <el-table-column prop="reason" label="领养理由" />
           <el-table-column prop="contact" label="联系方式" width="150" />
           <el-table-column prop="applyTime" label="申请时间" width="180">
@@ -33,7 +43,7 @@
         <!--分页组件-->
         <div style="margin-top: 20px; display: flex; justify-content: center;">
           <el-pagination
-              :pager-count="3"
+              :pager-count="7"
               v-model:current-page="pendingPage"
               v-model:page-size="pendingPageSize"
               :page-sizes="[5, 10, 20, 50]"
@@ -44,7 +54,7 @@
               background
           >
 
-          <template #total="{ total }">
+            <template #total="{ total }">
               <span>总计 {{ total }} 条</span>
             </template>
             <template #jumper>
@@ -93,40 +103,167 @@
               {{ row.reviewTime ? formatTime(row.reviewTime) : '-' }}
             </template>
           </el-table-column>
-        </el-table>
-         <!-- 分页组件-->
-        <div style="margin-top: 20px; display: flex; justify-content: center;">
-          <el-pagination
-              :pager-count="3"
-              v-model:current-page="pendingPage"
-              v-model:page-size="pendingPageSize"
-              :page-sizes="[5, 10, 20, 50]"
-              :total="pendingTotal"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="handlePendingSizeChange"
-              @current-change="handlePendingPageChange"
-              background
-          >
+          <el-table-column label="回访" width="240">
+            <template #default="{ row }">
+              <div v-if="row.status === 'APPROVED'" style="display: flex; gap: 8px">
+                <el-button
+                    type="primary"
+                    size="small"
+                    @click="showVisitDialog(row)"
+                    style="background: #E07A5F; border-color: #E07A5F"
+                >
+                  📝 添加回访
+                </el-button>
+                <el-button
+                    type="info"
+                    size="small"
+                    @click="viewVisitHistory(row)"
+                    style="background: linear-gradient(135deg, #81B29A 0%, #F2CC8F 100%); border: none; color: white"
+                >
+                  📋 回访历史
+                </el-button>
+              </div>
+              <span v-else style="color: #999">-</span>
+            </template>
+          </el-table-column>
 
-          <template #total="{ total }">
-              <span>总计 {{ total }} 条</span>
-            </template>
-            <template #jumper>
-              <span style="margin-left: 8px;">跳转至</span>
-              <el-input
-                  type="number"
-                  :min="1"
-                  :max="Math.ceil(allTotal / allPageSize)"
-                  v-model.number="jumpAllPage"
-                  @keyup.enter="handleJumpAllPage"
-                  style="width: 50px; margin-left: 8px;"
-              />
-            </template>
-          </el-pagination>
+        </el-table>
+        <!-- 分页组件-->
+        <div class="pagination-wrapper">
+          <el-pagination
+              v-model:current-page="allPage"
+              v-model:page-size="allPageSize"
+              :page-sizes="[5, 10, 20, 50]"
+              :total="allTotal"
+              layout="total, prev, pager, next, sizes, jumper"
+              :pager-count="7"
+              @size-change="handleAllSizeChange"
+              @current-change="handleAllPageChange"
+              background
+              class="custom-pagination"
+          />
         </div>
 
       </el-tab-pane>
     </el-tabs>
+
+    <!-- 添加回访记录弹窗 -->
+    <el-dialog v-model="visitDialogVisible" :title="`添加回访记录 - ${currentApplication?.pet?.name || ''}`" width="650px">
+      <el-form :model="visitForm" label-width="120px" class="visit-form">
+        <el-form-item label="回访方式" required>
+          <el-radio-group v-model="visitForm.visitType">
+            <el-radio label="PHONE">📞 电话回访</el-radio>
+            <el-radio label="ON_SITE">🏠 上门回访</el-radio>
+            <el-radio label="ONLINE">💬 在线回访</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="回访时间" required>
+          <el-date-picker
+              v-model="visitForm.visitTime"
+              type="datetime"
+              placeholder="选择回访时间"
+              format="YYYY-MM-DD HH:mm"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item label="宠物状态" required>
+          <el-radio-group v-model="visitForm.petStatus">
+            <el-radio label="HEALTHY">✅ 适应良好</el-radio>
+            <el-radio label="ADAPTING">⚠️ 适应中</el-radio>
+            <el-radio label="ISSUES">❌ 存在问题</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="回访内容">
+          <el-input
+              v-model="visitForm.content"
+              type="textarea"
+              rows="4"
+              placeholder="记录回访的详细情况..."
+          />
+        </el-form-item>
+
+        <el-form-item label="领养者反馈">
+          <el-input
+              v-model="visitForm.feedback"
+              type="textarea"
+              rows="3"
+              placeholder="领养者的意见或建议..."
+          />
+        </el-form-item>
+
+        <el-form-item label="后续回访">
+          <el-switch v-model="visitForm.needFollowUp" />
+          <span style="margin-left: 10px; color: #666">{{ visitForm.needFollowUp ? '需要后续回访' : '无需后续回访' }}</span>
+        </el-form-item>
+
+        <el-form-item v-if="visitForm.needFollowUp" label="下次回访时间">
+          <el-date-picker
+              v-model="visitForm.nextVisitTime"
+              type="date"
+              placeholder="选择下次回访日期"
+              format="YYYY-MM-DD"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              style="width: 100%"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="visitDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitVisitRecord" :loading="submitting" style="background: #E07A5F; border-color: #E07A5F">
+          提交回访记录
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 查看回访历史弹窗 -->
+    <el-dialog v-model="historyDialogVisible" title="回访历史" width="700px">
+      <div v-if="visitHistory.length === 0" style="text-align: center; padding: 40px; color: #999">
+        暂无回访记录
+      </div>
+      <el-timeline v-else>
+        <el-timeline-item
+            v-for="record in visitHistory"
+            :key="record.id"
+            :timestamp="formatTime(record.visitTime)"
+            placement="top"
+        >
+          <el-card shadow="hover" class="visit-record-card">
+            <div class="visit-record-header">
+              <el-tag :type="getVisitTypeTag(record.visitType)" size="small">
+                {{ getVisitTypeText(record.visitType) }}
+              </el-tag>
+              <el-tag :type="getPetStatusTag(record.petStatus)" size="small" style="margin-left: 10px">
+                {{ getPetStatusText(record.petStatus) }}
+              </el-tag>
+              <span style="margin-left: auto; color: #999; font-size: 12px">
+                回访人：{{ record.visitor?.username || '管理员' }}
+              </span>
+            </div>
+            <div v-if="record.content" style="margin-top: 12px">
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">📝 回访内容：</div>
+              <div style="color: #333; line-height: 1.6">{{ record.content }}</div>
+            </div>
+            <div v-if="record.feedback" style="margin-top: 12px">
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">💬 领养者反馈：</div>
+              <div style="color: #333; line-height: 1.6">{{ record.feedback }}</div>
+            </div>
+            <div v-if="record.needFollowUp && record.nextVisitTime" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd">
+              <span style="color: #E07A5F; font-size: 13px">
+                📅 下次回访：{{ formatDate(record.nextVisitTime) }}
+              </span>
+            </div>
+            <div style="margin-top: 12px; text-align: right">
+              <el-button type="danger" size="small" text @click="deleteVisitRecord(record.id)">删除</el-button>
+            </div>
+          </el-card>
+        </el-timeline-item>
+      </el-timeline>
+    </el-dialog>
   </div>
 </template>
 
@@ -148,6 +285,22 @@ const allPage = ref(1)
 const allPageSize = ref(10)
 const allTotal = ref(0)
 
+const visitDialogVisible = ref(false)
+const historyDialogVisible = ref(false)
+const currentApplication = ref(null)
+const visitHistory = ref([])
+const submitting = ref(false)
+
+const visitForm = ref({
+  visitType: 'PHONE',
+  visitTime: '',
+  petStatus: 'HEALTHY',
+  content: '',
+  feedback: '',
+  needFollowUp: false,
+  nextVisitTime: ''
+})
+
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
@@ -159,6 +312,11 @@ const formatTime = (time) => {
   return new Date(time).toLocaleString('zh-CN')
 }
 
+const formatDate = (time) => {
+  if (!time) return '-'
+  return new Date(time).toLocaleDateString('zh-CN')
+}
+
 const statusText = (status) => {
   const map = {
     'PENDING': '待审核',
@@ -166,6 +324,42 @@ const statusText = (status) => {
     'REJECTED': '已拒绝'
   }
   return map[status] || status
+}
+
+const getVisitTypeText = (type) => {
+  const map = {
+    'PHONE': '📞 电话回访',
+    'ON_SITE': '🏠 上门回访',
+    'ONLINE': '💬 在线回访'
+  }
+  return map[type] || type
+}
+
+const getVisitTypeTag = (type) => {
+  const map = {
+    'PHONE': 'primary',
+    'ON_SITE': 'success',
+    'ONLINE': 'info'
+  }
+  return map[type] || ''
+}
+
+const getPetStatusText = (status) => {
+  const map = {
+    'HEALTHY': '✅ 适应良好',
+    'ADAPTING': '⚠️ 适应中',
+    'ISSUES': '❌ 存在问题'
+  }
+  return map[status] || status
+}
+
+const getPetStatusTag = (status) => {
+  const map = {
+    'HEALTHY': 'success',
+    'ADAPTING': 'warning',
+    'ISSUES': 'danger'
+  }
+  return map[status] || ''
 }
 
 const loadPending = async () => {
@@ -251,6 +445,107 @@ const review = (applicationId, action) => {
       }
     } catch {
       ElMessage.error('操作失败')
+    }
+  }).catch(() => {})
+}
+
+const showVisitDialog = async (application) => {
+  currentApplication.value = application
+  visitForm.value = {
+    visitType: 'PHONE',
+    visitTime: new Date().toISOString().slice(0, 16),
+    petStatus: 'HEALTHY',
+    content: '',
+    feedback: '',
+    needFollowUp: false,
+    nextVisitTime: ''
+  }
+
+  try {
+    const res = await fetch(`http://localhost:8080/api/visit/list/${application.id}`)
+    if (res.ok) {
+      visitHistory.value = await res.json()
+      if (visitHistory.value.length > 0) {
+        const latest = visitHistory.value[0]
+        if (latest.needFollowUp && latest.nextVisitTime) {
+          visitForm.value.nextVisitTime = latest.nextVisitTime
+          visitForm.value.needFollowUp = true
+        }
+      }
+    }
+  } catch (error) {
+    console.error(error)
+  }
+
+  visitDialogVisible.value = true
+}
+
+const submitVisitRecord = async () => {
+  if (!visitForm.value.visitType || !visitForm.value.visitTime || !visitForm.value.petStatus) {
+    ElMessage.warning('请填写必填项')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const res = await fetch('http://localhost:8080/api/visit/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: currentUser.value.username,
+        applicationId: currentApplication.value.id,
+        ...visitForm.value
+      })
+    })
+
+    if (res.ok) {
+      ElMessage.success('回访记录添加成功')
+      visitDialogVisible.value = false
+      loadAll()
+    } else {
+      ElMessage.error(await res.text())
+    }
+  } catch (error) {
+    ElMessage.error('网络错误')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const viewVisitHistory = async (application) => {
+  currentApplication.value = application
+  try {
+    const res = await fetch(`http://localhost:8080/api/visit/list/${application.id}`)
+    if (res.ok) {
+      visitHistory.value = await res.json()
+      historyDialogVisible.value = true
+    } else {
+      ElMessage.error(await res.text())
+    }
+  } catch (error) {
+    ElMessage.error('加载失败')
+  }
+}
+
+const deleteVisitRecord = async (recordId) => {
+  ElMessageBox.confirm('确定要删除这条回访记录吗？', '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      const res = await fetch(`http://localhost:8080/api/visit/${recordId}?username=${currentUser.value.username}`, {
+        method: 'DELETE'
+      })
+      if (res.ok) {
+        ElMessage.success('删除成功')
+        visitHistory.value = visitHistory.value.filter(r => r.id !== recordId)
+        loadAll()
+      } else {
+        ElMessage.error(await res.text())
+      }
+    } catch {
+      ElMessage.error('删除失败')
     }
   }).catch(() => {})
 }
@@ -342,5 +637,20 @@ watch(activeTab, (newTab) => {
 .custom-pagination :deep(.el-input__wrapper) {
   border-radius: 8px;
 }
-</style>
 
+.visit-form {
+  margin-top: 20px;
+}
+
+.visit-record-card {
+  border-radius: 12px;
+  border: 1px solid #E5E7EB;
+}
+
+.visit-record-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+</style>

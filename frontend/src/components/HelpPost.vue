@@ -38,7 +38,7 @@
     <!-- 卡片式帖子列表 -->
     <el-row :gutter="20">
       <el-col v-for="post in filteredPosts" :key="post.id" :xs="24" :sm="12" :md="8" style="margin-bottom: 20px">
-        <el-card class="post-card" shadow="never" @click="showPostDetail(post)">
+        <el-card class="post-card" shadow="never" @click="showDetail(post)">
           <div class="post-header">
             <el-tag :type="getCategoryType(post.category)" size="small" class="category-tag">{{ post.category }}</el-tag>
             <span class="post-time">{{ formatDateTime(post.createTime) }}</span>
@@ -168,7 +168,7 @@
           :page-sizes="[5, 10, 20, 50]"
           :total="total"
           layout="total, prev, pager, next, sizes, jumper"
-          :pager-count="5"
+          :pager-count="7"
           @size-change="handleSizeChange"
           @current-change="handlePageChange"
           background
@@ -179,39 +179,15 @@
 
 
   </div>
-  <!-- 发布互助帖弹窗 -->
-  <el-dialog
-      v-model="publishVisible"
-      title="发布互助帖"
-      width="600px"
-  >
-    <el-form :model="postForm" label-width="80px">
-      <el-form-item label="分类">
-        <el-select v-model="postForm.category" placeholder="请选择分类">
-          <el-option label="物资共享" value="物资共享" />
-          <el-option label="医疗咨询" value="医疗咨询" />
-          <el-option label="经验分享" value="经验分享" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="标题">
-        <el-input v-model="postForm.title" placeholder="请输入标题" />
-      </el-form-item>
-      <el-form-item label="内容">
-        <el-input v-model="postForm.content" type="textarea" :rows="6" placeholder="请输入内容" />
-      </el-form-item>
-    </el-form>
-    <template #footer>
-      <el-button @click="publishVisible = false">取消</el-button>
-      <el-button type="primary" @click="submitPost" :loading="loading">发布</el-button>
-    </template>
-  </el-dialog>
+
 
 </template>
 
 <script setup>
 
-import { ref, onMounted, computed, nextTick } from 'vue'
+import {ref, onMounted, computed, nextTick, watch} from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { get, post, del } from '../utils/request.js'
 
 const emit = defineEmits(['needLogin'])
 
@@ -236,13 +212,6 @@ const filteredPosts = computed(() => {
     result = result.filter(post => post.category === filterCategory.value)
   }
 
-  result.sort((a, b) => {
-    if (sortBy.value === 'newest') {
-      return new Date(b.createTime) - new Date(a.createTime)
-    }
-    return new Date(a.createTime) - new Date(b.createTime)
-  })
-
   return result
 })
 
@@ -250,9 +219,18 @@ const resetFilter = () => {
   searchKeyword.value = ''
   filterCategory.value = ''
   sortBy.value = 'newest'
+  currentPage.value = 1
+  loadPostsFromServer()
 }
 
+// 监听筛选条件变化，自动重新加载
+watch([sortBy, searchKeyword, filterCategory], () => {
+  currentPage.value = 1
+  loadPostsFromServer()
+})
+
 const detailVisible = ref(false)
+
 const publishVisible = ref(false)
 const currentPost = ref({})
 const comments = ref([])
@@ -335,39 +313,36 @@ onMounted(async () => {
 const loadPostsFromServer = async () => {
   loading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/help/list?page=${currentPage.value - 1}&size=${pageSize.value}`)
-    if (res.ok) {
-      const data = await res.json()
-      posts.value = data.content
-      total.value = data.totalElements
+    // 使用封装的 get 方法，自动处理 URL 和参数
+    const data = await get('/api/help/list', {
+      page: currentPage.value - 1,
+      size: pageSize.value,
+      sortBy: sortBy.value
+    })
+    posts.value = data.content
+    total.value = data.totalElements
 
-      const postsWithComments = await Promise.all(
-          posts.value.map(async (post) => {
-            try {
-              const commentRes = await fetch(`http://localhost:8080/api/help/comments/${post.id}`)
-              if (commentRes.ok) {
-                const commentData = await commentRes.json()
-                post.commentCount = commentData.reduce((sum, c) => sum + 1 + (c.replies?.length || 0), 0)
-              }
-            } catch (e) {
-              post.commentCount = 0
-            }
-            return post
-          })
-      )
+    const postsWithComments = await Promise.all(
+        posts.value.map(async (post) => {
+          try {
+            // 使用 get 方法请求评论
+            const commentData = await get(`/api/help/comments/${post.id}`)
+            post.commentCount = commentData.reduce((sum, c) => sum + 1 + (c.replies?.length || 0), 0)
+          } catch (e) {
+            post.commentCount = 0
+          }
+          return post
+        })
+    )
 
-      posts.value = postsWithComments
-    } else {
-      const errorText = await res.text()
-      ElMessage.error('加载帖子失败：' + errorText)
-    }
+    posts.value = postsWithComments
   } catch (error) {
-    ElMessage.error('网络错误：' + error.message)
-    console.error(error)
+    ElMessage.error(error.message || '加载帖子失败')
   } finally {
     loading.value = false
   }
 }
+
 
 const handlePageChange = (page) => {
   currentPage.value = page
@@ -408,32 +383,25 @@ const submitPost = async () => {
   const user = getCurrentUser()
 
   try {
-    const res = await fetch('http://localhost:8080/api/help/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: user.username,
-        title: postForm.value.title,
-        content: postForm.value.content,
-        category: postForm.value.category
-      })
+    // 使用 post 方法，自动设置 headers 和 JSON 序列化
+    await post('/api/help/publish', {
+      username: user.username,
+      title: postForm.value.title,
+      content: postForm.value.content,
+      category: postForm.value.category
     })
 
-    if (res.ok) {
-      ElMessage.success('帖子发布成功！')
-      publishVisible.value = false
-      postForm.value = { category: '', title: '', content: '' }
-      await loadPostsFromServer()
-    } else {
-      ElMessage.error(await res.text())
-    }
+    ElMessage.success('帖子发布成功！')
+    publishVisible.value = false
+    postForm.value = { category: '', title: '', content: '' }
+    await loadPostsFromServer()
   } catch (error) {
-    ElMessage.error('网络错误')
-    console.error(error)
+    ElMessage.error(error.message)
   } finally {
     loading.value = false
   }
 }
+
 
 const showDetail = async (post) => {
   currentPost.value = post
@@ -444,13 +412,8 @@ const showDetail = async (post) => {
 const loadComments = async (postId) => {
   commentsLoading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/help/comments/${postId}`)
-    if (res.ok) {
-      const data = await res.json()
-      comments.value = data
-    } else {
-      comments.value = []
-    }
+    const data = await get(`/api/help/comments/${postId}`)
+    comments.value = data
   } catch (error) {
     ElMessage.error('加载评论失败')
     comments.value = []
@@ -458,6 +421,7 @@ const loadComments = async (postId) => {
     commentsLoading.value = false
   }
 }
+
 
 const submitComment = async () => {
   if (!newComment.value.trim()) {
@@ -473,28 +437,21 @@ const submitComment = async () => {
 
   const user = getCurrentUser()
   try {
-    const res = await fetch('http://localhost:8080/api/help/comment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        postId: currentPost.value.id,
-        username: user.username,
-        content: newComment.value
-      })
+    await post('/api/help/comment', {
+      postId: currentPost.value.id,
+      username: user.username,
+      content: newComment.value
     })
 
-    if (res.ok) {
-      ElMessage.success('评论成功')
-      newComment.value = ''
-      await loadComments(currentPost.value.id)
-      await loadPostsFromServer()
-    } else {
-      ElMessage.error(await res.text())
-    }
+    ElMessage.success('评论成功')
+    newComment.value = ''
+    await loadComments(currentPost.value.id)
+    await loadPostsFromServer()
   } catch (error) {
-    ElMessage.error('评论失败')
+    ElMessage.error(error.message || '评论失败')
   }
 }
+
 
 const submitReply = async (commentId, type) => {
   if (!replyText.value.trim()) {
@@ -510,35 +467,73 @@ const submitReply = async (commentId, type) => {
 
   const user = getCurrentUser()
   try {
-    const res = await fetch('http://localhost:8080/api/help/reply', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        postId: currentPost.value.id,
-        username: user.username,
-        content: replyText.value,
-        parentCommentId: commentId,
-        replyToCommentId: type === 'reply' ? null : replyBoxReplyId.value
-      })
+    await post('/api/help/comment', {
+      postId: currentPost.value.id,
+      username: user.username,
+      content: replyText.value,
+      parentId: commentId
     })
 
-    if (res.ok) {
-      ElMessage.success('回复成功')
-      replyText.value = ''
-      replyBoxIndex.value = -1
-      replyBoxReplyId.value = -1
-      replyBoxType.value = ''
-      await loadComments(currentPost.value.id)
-    } else {
-      ElMessage.error(await res.text())
-    }
+    ElMessage.success('回复成功')
+    replyText.value = ''
+    replyBoxIndex.value = -1
+    replyBoxReplyId.value = -1
+    replyBoxType.value = ''
+    await loadComments(currentPost.value.id)
   } catch (error) {
-    ElMessage.error('回复失败')
+    ElMessage.error(error.message || '回复失败')
   }
 }
 
+
 const toggleReplies = (commentId) => {
   expandedReplies.value[commentId] = !expandedReplies.value[commentId]
+}
+
+// 补全缺失的辅助函数
+const showMainReplyBox = (comment) => {
+  const index = comments.value.indexOf(comment)
+  replyBoxIndex.value = index
+  replyBoxType.value = 'main'
+  replyBoxReplyId.value = -1
+  replyText.value = ''
+}
+
+const showReplyReplyBox = (index, reply) => {
+  replyBoxIndex.value = index
+  replyBoxType.value = 'reply'
+  replyBoxReplyId.value = reply.id
+  replyText.value = ''
+}
+
+const submitReplyToMain = async (commentId) => {
+  await submitReply(commentId, 'main')
+}
+
+const submitReplyToReply = async (commentId, replyId) => {
+  await submitReply(commentId, 'reply')
+}
+
+const getVisibleReplies = (comment, index) => {
+  if (!comment.replies || comment.replies.length === 0) return []
+  if (expandedReplies.value[index]) return comment.replies
+  return comment.replies.slice(0, 3)
+}
+
+const toggleExpand = (index) => {
+  expandedReplies.value[index] = !expandedReplies.value[index]
+}
+
+const handleNeedLogin = () => {
+  emit('needLogin')
+}
+
+const deleteMainComment = async (commentId) => {
+  await deleteComment(commentId)
+}
+
+const deleteReply = async (replyId) => {
+  await deleteComment(replyId)
 }
 
 const showReplyBox = (index, type, replyId = -1) => {
@@ -562,22 +557,22 @@ const deleteComment = async (commentId) => {
       cancelButtonText: '取消',
       type: 'warning'
     }).then(async () => {
-      const res = await fetch(`http://localhost:8080/api/help/comment/${commentId}`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
-        ElMessage.success('删除成功')
-        await loadComments(currentPost.value.id)
-        await loadPostsFromServer()
-      } else {
-        ElMessage.error(await res.text())
-      }
+      const user = getCurrentUser()
+      await del(`/api/help/comment/${commentId}?username=${user.username}`)
+
+      ElMessage.success('删除成功')
+      await loadComments(currentPost.value.id)
+      await loadPostsFromServer()
     }).catch(() => {})
   } catch (error) {
-    ElMessage.error('删除失败')
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || '删除失败')
+    }
   }
 }
+
 </script>
+
 
 
 <style scoped>
