@@ -74,6 +74,10 @@
 </template>
 
 <script setup>
+/**
+ * 领养申请弹窗组件
+ * 用于领养者填写并提交宠物领养申请信息
+ */
 import { ref, defineProps, defineEmits, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
@@ -81,9 +85,12 @@ import { post } from '../utils/request.js'
 const props = defineProps({ pet: Object })
 const emit = defineEmits(['close', 'success'])
 
+/** 弹窗显示状态 */
 const visible = ref(true)
+/** 提交加载状态 */
 const loading = ref(false)
 
+/** 领养申请表单数据 */
 const form = ref({
   reason: '',
   family: '',
@@ -94,6 +101,10 @@ const form = ref({
   otherPetsInfo: ''
 })
 
+/**
+ * 提交领养申请
+ * 校验必填字段后向后端发送申请数据
+ */
 const submitApply = async () => {
   if (!form.value.reason.trim() || !form.value.contact.trim() || !form.value.residenceType || !form.value.petExperience) {
     ElMessage.warning('请填写完整的领养信息')
@@ -140,6 +151,11 @@ const submitApply = async () => {
   }
 }
 
+/**
+ * 监听弹窗显示状态变化
+ * 当弹窗关闭时向父组件触发 close 事件
+ * @param {boolean} newVal - 新的显示状态
+ */
 watch(visible, (newVal) => {
   if (!newVal) emit('close')
 })

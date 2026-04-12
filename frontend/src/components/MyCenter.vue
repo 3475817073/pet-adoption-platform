@@ -2,7 +2,7 @@
   <div>
     <el-page-header title="个人中心" content="查看我的发布和申请记录" />
 
-    <!-- 用户信息卡片 -->
+    <!-- 用户信息卡片：展示用户名、角色标签及统计数据 -->
     <el-card style="max-width: 1200px; margin: 20px auto; border-radius: 16px">
       <div class="user-profile">
         <div class="avatar-section">
@@ -23,10 +23,10 @@
       </div>
     </el-card>
 
-    <!-- Tab 切换 -->
+    <!-- Tab 切换：我的发布与我的申请 -->
     <el-tabs v-model="activeTab" type="border-card" style="max-width: 1200px; margin: 20px auto">
 
-      <!-- 我的发布 -->
+      <!-- 我的发布：展示用户已发布的宠物卡片列表 -->
       <el-tab-pane label="🐾 我的发布" name="pets">
         <el-row :gutter="20" v-if="publishedPets.length > 0">
           <el-col v-for="pet in publishedPets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" style="margin-bottom: 20px">
@@ -70,7 +70,7 @@
         </div>
       </el-tab-pane>
 
-      <!-- 我的申请 -->
+      <!-- 我的申请：展示用户提交的领养申请记录 -->
       <el-tab-pane label="💕 我的申请" name="applications">
         <el-timeline v-if="myApplications.length > 0">
           <el-timeline-item
@@ -114,10 +114,10 @@
 
     </el-tabs>
 
-    <!-- 编辑宠物弹窗 -->
+    <!-- 编辑宠物弹窗：提供宠物信息编辑表单 -->
     <el-dialog v-model="editDialogVisible" :title="`编辑宠物 - ${editingPet?.name || ''}`" width="700px">
       <div v-if="editingPet" class="edit-container">
-        <!-- 左侧：宠物照片 -->
+        <!-- 左侧：宠物照片预览 -->
         <div class="edit-image-section">
           <img v-if="getPetImageUrl(editingPet)" :src="getPetImageUrl(editingPet)" class="edit-main-image" />
           <div v-else class="edit-no-image">🐾</div>
@@ -169,6 +169,10 @@
 </template>
 
 <script setup>
+/**
+ * 个人中心页面组件
+ * 展示用户基本信息、已发布宠物列表、领养申请记录，支持宠物编辑与删除操作
+ */
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -187,41 +191,76 @@ const editForm = ref({
 })
 const saving = ref(false)
 
-// 分页相关变量
+/** 宠物列表当前页码 */
 const petsCurrentPage = ref(1)
+/** 宠物列表每页条数 */
 const petsPageSize = ref(8)
+/** 宠物列表总条数 */
 const petsTotal = ref(0)
+/** 申请列表当前页码 */
 const appsCurrentPage = ref(1)
+/** 申请列表每页条数 */
 const appsPageSize = ref(10)
+/** 申请列表总条数 */
 const appsTotal = ref(0)
 
 
+/**
+ * 获取用户角色对应的标签颜色类型
+ * @param {string} role - 用户角色标识
+ * @returns {string} Element Plus Tag 组件的颜色类型
+ */
 const getRoleColor = (role) => {
   const colors = { ADMIN: 'danger', USER: 'info' }
   return colors[role] || ''
 }
 
+/**
+ * 将用户角色标识转换为中文显示
+ * @param {string} role - 用户角色标识
+ * @returns {string} 中文角色文本
+ */
 const getRoleText = (role) => {
   const texts = { ADMIN: '管理员', USER: '普通用户' }
   return texts[role] || '未知'
 }
 
 
+/**
+ * 获取申请状态对应的标签颜色类型
+ * @param {string} status - 申请状态码
+ * @returns {string} Element Plus Tag 组件的颜色类型
+ */
 const getStatusColor = (status) => {
   const colors = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
   return colors[status] || ''
 }
 
+/**
+ * 将申请状态码转换为中文显示
+ * @param {string} status - 申请状态码
+ * @returns {string} 中文状态文本
+ */
 const getStatusText = (status) => {
   const texts = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝' }
   return texts[status] || '未知'
 }
 
+/**
+ * 格式化日期时间为本地系统格式
+ * @param {string} dateStr - 原始日期字符串
+ * @returns {string} 格式化后的时间字符串
+ */
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleString('zh-CN')
 }
 
+/**
+ * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
+ * @param {Object} pet - 宠物对象
+ * @returns {string|null} 完整的图片 URL 或 null
+ */
 const getPetImageUrl = (pet) => {
   if (pet.photoUrl) {
     return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
@@ -240,6 +279,10 @@ const getPetImageUrl = (pet) => {
   return null
 }
 
+/**
+ * 从后端加载用户数据：包括发布的宠物列表与提交的领养申请记录
+ * 支持分页加载，根据当前页码与每页条数请求对应数据
+ */
 const loadUserData = async () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) {
@@ -272,23 +315,38 @@ const loadUserData = async () => {
   }
 }
 
-// 分页处理方法
+/**
+ * 宠物列表页码变化处理
+ * @param {number} page - 新的页码
+ */
 const handlePetsPageChange = (page) => {
   petsCurrentPage.value = page
   loadUserData()
 }
 
+/**
+ * 宠物列表每页条数变化处理
+ * @param {number} size - 新的每页条数
+ */
 const handlePetsSizeChange = (size) => {
   petsPageSize.value = size
   petsCurrentPage.value = 1
   loadUserData()
 }
 
+/**
+ * 申请列表页码变化处理
+ * @param {number} page - 新的页码
+ */
 const handleAppsPageChange = (page) => {
   appsCurrentPage.value = page
   loadUserData()
 }
 
+/**
+ * 申请列表每页条数变化处理
+ * @param {number} size - 新的每页条数
+ */
 const handleAppsSizeChange = (size) => {
   appsPageSize.value = size
   appsCurrentPage.value = 1
@@ -296,6 +354,10 @@ const handleAppsSizeChange = (size) => {
 }
 
 
+/**
+ * 打开编辑宠物弹窗，初始化表单数据
+ * @param {Object} pet - 待编辑的宠物对象
+ */
 const editPet = (pet) => {
   editingPet.value = pet
   editForm.value = {
@@ -308,6 +370,10 @@ const editPet = (pet) => {
   editDialogVisible.value = true
 }
 
+/**
+ * 保存宠物信息修改
+ * 校验必填项后向 PUT 接口提交更新数据
+ */
 const saveEdit = async () => {
   if (!editForm.value.name || !editForm.value.type || !editForm.value.description) {
     ElMessage.warning('请填写完整信息')
@@ -353,6 +419,11 @@ const saveEdit = async () => {
 }
 
 
+/**
+ * 删除指定宠物信息
+ * 弹出确认框，校验权限后向 DELETE 接口发送请求
+ * @param {number} petId - 待删除宠物的 ID
+ */
 const deletePet = (petId) => {
   ElMessageBox.confirm('确定要删除这个宠物信息吗？此操作不可恢复', '确认删除', {
     confirmButtonText: '确定',
@@ -385,6 +456,9 @@ const deletePet = (petId) => {
 }
 
 
+/**
+ * 组件挂载时执行：加载用户数据
+ */
 onMounted(() => {
   loadUserData()
 })

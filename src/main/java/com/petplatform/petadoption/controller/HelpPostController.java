@@ -17,6 +17,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 互助交流控制器
+ * 处理互助帖子的发布、查询以及评论（含回复）的增删查逻辑
+ */
 @RestController
 @RequestMapping("/api/help")
 @RequiredArgsConstructor
@@ -27,6 +31,13 @@ public class HelpPostController {
     private final UserService userService;
     private final CommentService commentService;
 
+    /**
+     * 分页获取互助帖子列表
+     * @param page 页码（从0开始）
+     * @param size 每页条数
+     * @param sortBy 排序方式：newest（最新）或 oldest（最早）
+     * @return 分页的帖子列表
+     */
     @GetMapping("/list")
     public ResponseEntity<Page<HelpPost>> list(
             @RequestParam(defaultValue = "0") int page,
@@ -38,6 +49,11 @@ public class HelpPostController {
     }
 
 
+    /**
+     * 发布新的互助帖子
+     * @param request 包含用户名、标题、内容及分类的请求体
+     * @return 发布结果响应
+     */
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
         try {
@@ -61,11 +77,19 @@ public class HelpPostController {
         }
     }
 
+    /**
+     * 获取指定帖子的评论列表（组装为树形结构，包含主评论及其回复）
+     * @param postId 帖子ID
+     * @return 结构化后的评论数据列表
+     */
     @GetMapping("/comments/{postId}")
     public ResponseEntity<?> getComments(@PathVariable Long postId) {
         try {
             List<Comment> allComments = commentService.findByPostId(postId);
 
+            /*
+             * 遍历所有评论，筛选出顶级评论（parent为null），并为其嵌套对应的回复列表
+             */
             List<Map<String, Object>> result = new ArrayList<>();
 
             for (Comment comment : allComments) {
@@ -101,6 +125,11 @@ public class HelpPostController {
     }
 
 
+    /**
+     * 添加评论或回复
+     * @param request 包含帖子ID、用户名、内容及可选父评论ID的请求体
+     * @return 操作结果响应
+     */
     @PostMapping("/comment")
     public ResponseEntity<?> addComment(@RequestBody Map<String, Object> request) {
         try {
@@ -121,6 +150,9 @@ public class HelpPostController {
             comment.setUser(user);
             comment.setContent((String) request.get("content"));
 
+            /*
+             * 如果请求中包含 parentId，则将其作为回复处理，建立父子关联
+             */
             if (request.get("parentId") != null) {
                 Long parentId = Long.valueOf(request.get("parentId").toString());
                 Comment parent = commentService.findById(parentId);
@@ -136,6 +168,12 @@ public class HelpPostController {
         }
     }
 
+    /**
+     * 删除指定的评论（仅限评论发布者本人操作）
+     * @param commentId 待删除的评论ID
+     * @param username 当前操作用户名
+     * @return 删除结果响应
+     */
     @DeleteMapping("/comment/{commentId}")
     public ResponseEntity<?> deleteComment(
             @PathVariable Long commentId,

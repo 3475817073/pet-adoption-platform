@@ -45,7 +45,7 @@
       </el-row>
     </div>
 
-    <!-- 宠物卡片 -->
+    <!-- 宠物卡片：展示宠物图片、基本信息及操作按钮 -->
     <el-row :gutter="20">
       <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" style="margin-bottom: 20px">
         <el-card class="pet-card" shadow="never">
@@ -79,7 +79,6 @@
     </el-row>
 
     <!-- 分页组件 -->
-    <!-- 分页组件 -->
     <div class="pagination-wrapper">
       <el-pagination
           v-model:current-page="currentPage"
@@ -98,8 +97,7 @@
 
     <el-empty v-if="pets.length === 0 && !loading" description="暂无符合条件的宠物" :image-size="200" />
 
-    <!-- 宠物详情弹窗 -->
-
+    <!-- 宠物详情弹窗：展示多张图片与详细介绍 -->
     <el-dialog v-model="detailVisible" :title="selectedPet?.name" width="700px">
       <div v-if="selectedPet" class="pet-detail-container">
         <div class="detail-images">
@@ -154,7 +152,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+/**
+ * 宠物列表页面组件
+ * 提供宠物浏览、多条件筛选、分页查看、详情预览及领养申请功能
+ */
+import { ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
 import { get } from '../utils/request.js'
@@ -171,21 +173,33 @@ const selectedPet = ref(null)
 const detailVisible = ref(false)
 const loading = ref(false)
 
+/** 当前页码 */
 const currentPage = ref(1)
+/** 每页显示条数 */
 const pageSize = ref(12)
+/** 总记录数 */
 const total = ref(0)
 const jumpPage = ref(1)
 
 
 
-
+/**
+ * 从后端加载宠物列表数据，支持分页与多条件筛选
+ * 根据当前页码、每页条数以及搜索/筛选条件构建请求参数
+ */
 const loadPets = async () => {
   loading.value = true
   try {
-    const data = await get('/api/pet/list', {
+    const params = {
       page: currentPage.value - 1,
       size: pageSize.value
-    })
+    }
+    if (filterType.value) params.type = filterType.value
+    if (filterGender.value) params.gender = filterGender.value
+    if (filterAge.value) params.age = filterAge.value
+    if (searchKeyword.value) params.name = searchKeyword.value
+
+    const data = await get('/api/pet/list', params)
     pets.value = data.content
     total.value = data.totalElements
   } catch (error) {
@@ -195,21 +209,43 @@ const loadPets = async () => {
   }
 }
 
+/**
+ * 组件挂载时执行：初始化加载宠物列表
+ */
 onMounted(() => {
   loadPets()
 })
 
+/**
+ * 监听筛选条件变化，自动重置页码并重新请求数据
+ */
+watch([filterType, filterGender, filterAge, searchKeyword], () => {
+  currentPage.value = 1
+  loadPets()
+})
+
+/**
+ * 处理每页显示条数变化
+ * @param {number} newSize - 新的每页条数
+ */
 const handleSizeChange = (newSize) => {
   pageSize.value = newSize
   currentPage.value = 1
   loadPets()
 }
 
+/**
+ * 处理页码变化
+ * @param {number} newPage - 目标页码
+ */
 const handleCurrentChange = (newPage) => {
   currentPage.value = newPage
   loadPets()
 }
 
+/**
+ * 处理跳转页码输入，校验范围后执行跳转
+ */
 const handleJumpPage = () => {
   if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= Math.ceil(total.value / pageSize.value)) {
     currentPage.value = jumpPage.value
@@ -218,6 +254,10 @@ const handleJumpPage = () => {
 }
 
 
+/**
+ * 打开宠物详情弹窗，解析并处理宠物图片数据
+ * @param {Object} pet - 选中的宠物对象
+ */
 const showDetail = (pet) => {
 
   selectedPet.value = pet
@@ -235,6 +275,11 @@ const showDetail = (pet) => {
   detailVisible.value = true
 }
 
+/**
+ * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
+ * @param {Object} pet - 宠物对象
+ * @returns {string|null} 完整的图片 URL 或 null
+ */
 const getPetImageUrl = (pet) => {
   if (pet.photoUrl) {
     return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
@@ -253,6 +298,9 @@ const getPetImageUrl = (pet) => {
   return null
 }
 
+/**
+ * 从详情页触发领养申请，校验登录状态
+ */
 const applyFromDetail = () => {
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能申请领养')
@@ -264,6 +312,10 @@ const applyFromDetail = () => {
   applyDialogVisible.value = true
 }
 
+/**
+ * 从列表页触发领养申请，校验登录状态与宠物领养状态
+ * @param {Object} pet - 待申请的宠物对象
+ */
 const applyAdopt = (pet) => {
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能申请领养')
@@ -282,11 +334,16 @@ const applyAdopt = (pet) => {
 //   ElMessage.success('领养申请已提交！请等待管理员审核')
 // }
 
+/**
+ * 重置所有筛选条件并重新加载第一页数据
+ */
 const resetFilter = () => {
   searchKeyword.value = ''
   filterType.value = ''
   filterGender.value = ''
   filterAge.value = ''
+  currentPage.value = 1
+  loadPets()
 }
 </script>
 
@@ -590,4 +647,3 @@ const resetFilter = () => {
   border-radius: 8px;
 }
 </style>
-

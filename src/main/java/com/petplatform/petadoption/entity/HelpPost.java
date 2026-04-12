@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+
+// 帖子
 @Entity
 @Table(name = "help_posts")
 @Data
@@ -13,11 +15,11 @@ public class HelpPost {
     private Long id;
 
     @ManyToOne
-    private User user;
+    private User user;//用户
 
-    private String title;
-    private String content;
-    private String category;   // 物资共享 / 医疗咨询 / 经验分享
+    private String title;//标题
+    private String content;//内容
+    private String category;   //分类：物资共享 / 医疗咨询 / 经验分享
 
-    private LocalDateTime createTime = LocalDateTime.now();
+    private LocalDateTime createTime = LocalDateTime.now();//创建时间
 }

@@ -185,6 +185,10 @@
 
 <script setup>
 
+/**
+ * 互助交流页面组件
+ * 提供帖子浏览、筛选、发布、详情查看、评论与回复、删除等完整交互功能
+ */
 import {ref, onMounted, computed, nextTick, watch} from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
@@ -197,6 +201,10 @@ const searchKeyword = ref('')
 const filterCategory = ref('')
 const sortBy = ref('newest')
 
+/**
+ * 根据搜索关键词和分类动态过滤帖子列表
+ * @returns {Array} 过滤后的帖子数组
+ */
 const filteredPosts = computed(() => {
   let result = [...posts.value]
 
@@ -215,6 +223,9 @@ const filteredPosts = computed(() => {
   return result
 })
 
+/**
+ * 重置所有筛选条件并重新加载第一页数据
+ */
 const resetFilter = () => {
   searchKeyword.value = ''
   filterCategory.value = ''
@@ -223,7 +234,9 @@ const resetFilter = () => {
   loadPostsFromServer()
 }
 
-// 监听筛选条件变化，自动重新加载
+/**
+ * 监听排序方式、搜索关键词、分类变化，自动重置页码并重新请求数据
+ */
 watch([sortBy, searchKeyword, filterCategory], () => {
   currentPage.value = 1
   loadPostsFromServer()
@@ -257,19 +270,35 @@ const total = ref(0)
 const jumpPage = ref(1)
 
 
+/**
+ * 获取本地存储中的当前登录用户信息
+ * @returns {Object|null} 用户信息对象，未登录则返回 null
+ */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
   try { return JSON.parse(userStr) } catch { return null }
 }
 
+/**
+ * 判断当前用户是否有权删除指定评论
+ * @param {string} commentUser - 评论发布者用户名
+ * @returns {boolean} 是否有权删除
+ */
 const canDelete = (commentUser) => {
   const user = getCurrentUser()
   return isLoggedIn.value && user && commentUser === user.username
 }
 
+/**
+ * 检查登录状态并更新本地标记
+ */
 const checkLoginStatus = () => { isLoggedIn.value = !!localStorage.getItem('user') }
 
+/**
+ * 计算当前帖子下的总评论数（包含主评论和回复）
+ * @returns {number} 评论总数
+ */
 const totalComments = computed(() => {
   let count = 0
   comments.value.forEach(c => {
@@ -279,6 +308,11 @@ const totalComments = computed(() => {
   return count
 })
 
+/**
+ * 根据帖子分类返回对应的 Element Plus 标签颜色类型
+ * @param {string} category - 帖子分类名称
+ * @returns {string} 标签类型字符串
+ */
 const getCategoryType = (category) => {
   const typeMap = {
     '物资共享': '',
@@ -288,6 +322,11 @@ const getCategoryType = (category) => {
   return typeMap[category] || ''
 }
 
+/**
+ * 格式化日期时间为 YYYY-MM-DD HH:mm 格式
+ * @param {string|Date} dateTime - 原始时间数据
+ * @returns {string} 格式化后的时间字符串
+ */
 const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
   const date = new Date(dateTime)
@@ -299,17 +338,28 @@ const formatDateTime = (dateTime) => {
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
+/**
+ * 格式化评论时间为本地系统默认格式
+ * @param {string} timeStr - 原始时间字符串
+ * @returns {string} 格式化后的时间字符串
+ */
 const formatCommentTime = (timeStr) => {
   if (!timeStr) return ''
   const date = new Date(timeStr)
   return date.toLocaleString('zh-CN')
 }
 
+/**
+ * 组件挂载时执行：检查登录状态并加载帖子列表
+ */
 onMounted(async () => {
   checkLoginStatus()
   await loadPostsFromServer()
 })
 
+/**
+ * 从后端服务器加载分页帖子数据，并异步获取每条帖子的评论数量
+ */
 const loadPostsFromServer = async () => {
   loading.value = true
   try {
@@ -344,17 +394,28 @@ const loadPostsFromServer = async () => {
 }
 
 
+/**
+ * 处理页码变化，重新请求数据
+ * @param {number} page - 目标页码
+ */
 const handlePageChange = (page) => {
   currentPage.value = page
   loadPostsFromServer()
 }
 
+/**
+ * 处理每页显示条数变化，重置页码并重新请求
+ * @param {number} size - 新的每页条数
+ */
 const handleSizeChange = (size) => {
   pageSize.value = size
   currentPage.value = 1
   loadPostsFromServer()
 }
 
+/**
+ * 处理跳转页码输入，校验范围后执行跳转
+ */
 const handleJumpPage = () => {
   if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= Math.ceil(total.value / pageSize.value)) {
     currentPage.value = jumpPage.value
@@ -363,6 +424,9 @@ const handleJumpPage = () => {
 }
 
 
+/**
+ * 打开发布帖子弹窗，未登录则提示并触发登录事件
+ */
 const showPublishDialog = () => {
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能发布互助帖')
@@ -373,6 +437,9 @@ const showPublishDialog = () => {
   publishVisible.value = true
 }
 
+/**
+ * 提交新发布的互助帖到后端
+ */
 const submitPost = async () => {
   if (!postForm.value.category || !postForm.value.title || !postForm.value.content) {
     ElMessage.warning('请填写完整信息')
@@ -403,12 +470,20 @@ const submitPost = async () => {
 }
 
 
+/**
+ * 打开帖子详情弹窗并加载对应评论数据
+ * @param {Object} post - 选中的帖子对象
+ */
 const showDetail = async (post) => {
   currentPost.value = post
   detailVisible.value = true
   await loadComments(post.id)
 }
 
+/**
+ * 根据帖子 ID 从后端加载评论列表
+ * @param {number} postId - 帖子唯一标识
+ */
 const loadComments = async (postId) => {
   commentsLoading.value = true
   try {
@@ -423,6 +498,9 @@ const loadComments = async (postId) => {
 }
 
 
+/**
+ * 提交主评论到后端
+ */
 const submitComment = async () => {
   if (!newComment.value.trim()) {
     ElMessage.warning('请输入评论内容')
@@ -453,6 +531,11 @@ const submitComment = async () => {
 }
 
 
+/**
+ * 提交回复（可回复主评论或二级回复）
+ * @param {number} commentId - 父级评论 ID
+ * @param {string} type - 回复类型标识
+ */
 const submitReply = async (commentId, type) => {
   if (!replyText.value.trim()) {
     ElMessage.warning('请输入回复内容')
@@ -486,11 +569,18 @@ const submitReply = async (commentId, type) => {
 }
 
 
+/**
+ * 切换某条评论下回复的展开/收起状态
+ * @param {number} commentId - 评论 ID
+ */
 const toggleReplies = (commentId) => {
   expandedReplies.value[commentId] = !expandedReplies.value[commentId]
 }
 
-// 补全缺失的辅助函数
+/**
+ * 显示主评论的回复输入框
+ * @param {Object} comment - 目标主评论对象
+ */
 const showMainReplyBox = (comment) => {
   const index = comments.value.indexOf(comment)
   replyBoxIndex.value = index
@@ -499,6 +589,11 @@ const showMainReplyBox = (comment) => {
   replyText.value = ''
 }
 
+/**
+ * 显示二级回复的回复输入框
+ * @param {number} index - 父级评论在数组中的索引
+ * @param {Object} reply - 目标回复对象
+ */
 const showReplyReplyBox = (index, reply) => {
   replyBoxIndex.value = index
   replyBoxType.value = 'reply'
@@ -506,36 +601,72 @@ const showReplyReplyBox = (index, reply) => {
   replyText.value = ''
 }
 
+/**
+ * 提交对主评论的回复
+ * @param {number} commentId - 主评论 ID
+ */
 const submitReplyToMain = async (commentId) => {
   await submitReply(commentId, 'main')
 }
 
+/**
+ * 提交对二级回复的回复
+ * @param {number} commentId - 所属主评论 ID
+ * @param {number} replyId - 目标回复 ID
+ */
 const submitReplyToReply = async (commentId, replyId) => {
   await submitReply(commentId, 'reply')
 }
 
+/**
+ * 获取当前应显示的回复列表（默认显示前 3 条，展开后显示全部）
+ * @param {Object} comment - 主评论对象
+ * @param {number} index - 主评论索引
+ * @returns {Array} 可见的回复数组
+ */
 const getVisibleReplies = (comment, index) => {
   if (!comment.replies || comment.replies.length === 0) return []
   if (expandedReplies.value[index]) return comment.replies
   return comment.replies.slice(0, 3)
 }
 
+/**
+ * 切换指定索引评论的回复展开状态
+ * @param {number} index - 评论索引
+ */
 const toggleExpand = (index) => {
   expandedReplies.value[index] = !expandedReplies.value[index]
 }
 
+/**
+ * 触发父组件的登录引导事件
+ */
 const handleNeedLogin = () => {
   emit('needLogin')
 }
 
+/**
+ * 删除主评论的快捷方法
+ * @param {number} commentId - 主评论 ID
+ */
 const deleteMainComment = async (commentId) => {
   await deleteComment(commentId)
 }
 
+/**
+ * 删除二级回复的快捷方法
+ * @param {number} replyId - 回复 ID
+ */
 const deleteReply = async (replyId) => {
   await deleteComment(replyId)
 }
 
+/**
+ * 显示通用回复输入框（保留兼容）
+ * @param {number} index - 评论索引
+ * @param {string} type - 回复类型
+ * @param {number} replyId - 目标回复 ID
+ */
 const showReplyBox = (index, type, replyId = -1) => {
   replyBoxIndex.value = index
   replyBoxType.value = type
@@ -543,6 +674,9 @@ const showReplyBox = (index, type, replyId = -1) => {
   replyText.value = ''
 }
 
+/**
+ * 取消当前回复输入状态，清空输入框
+ */
 const cancelReply = () => {
   replyBoxIndex.value = -1
   replyBoxReplyId.value = -1
@@ -550,6 +684,10 @@ const cancelReply = () => {
   replyText.value = ''
 }
 
+/**
+ * 删除指定评论（含确认弹窗与权限校验）
+ * @param {number} commentId - 待删除评论 ID
+ */
 const deleteComment = async (commentId) => {
   try {
     ElMessageBox.confirm('确定要删除这条评论吗？', '提示', {
@@ -716,4 +854,3 @@ const deleteComment = async (commentId) => {
   border-radius: 8px;
 }
 </style>
-

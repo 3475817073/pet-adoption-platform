@@ -11,7 +11,7 @@
       <div class="doodle-line"></div>
     </div>
 
-    <!-- 主要内容区 -->
+    <!-- 主要内容区：左侧发布指南与右侧表单 -->
     <div class="content-wrapper">
       <!-- 左侧：发布指南 -->
       <div class="guide-section">
@@ -128,6 +128,10 @@
 </template>
 
 <script setup>
+/**
+ * 发布宠物页面组件
+ * 提供宠物信息录入、图片上传及发布功能
+ */
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -145,6 +149,11 @@ const loading = ref(false)
 const imageList = ref([])
 const uploadedUrls = ref([])
 
+/**
+ * 上传前校验：检查文件类型是否为图片且大小不超过 5MB
+ * @param {File} file - 待上传的文件对象
+ * @returns {boolean} 校验结果
+ */
 const beforeUpload = (file) => {
   const isImage = file.type.startsWith('image/')
   const isLt5M = file.size / 1024 / 1024 < 5
@@ -160,6 +169,12 @@ const beforeUpload = (file) => {
   return true
 }
 
+/**
+ * 图片上传成功回调
+ * @param {Object} response - 后端返回的响应数据
+ * @param {Object} file - 当前上传的文件对象
+ * @param {Array} fileList - 当前文件列表
+ */
 const handleUploadSuccess = (response, file, fileList) => {
   if (response.url) {
     uploadedUrls.value.push(response.url)
@@ -167,10 +182,17 @@ const handleUploadSuccess = (response, file, fileList) => {
   }
 }
 
+/**
+ * 图片上传失败回调
+ */
 const handleUploadError = () => {
   ElMessage.error('图片上传失败')
 }
 
+/**
+ * 提交发布宠物信息
+ * 校验必填项与登录状态后，将表单数据与图片 URL 发送至后端
+ */
 const publishPet = async () => {
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能发布宠物')

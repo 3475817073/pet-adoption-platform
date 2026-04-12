@@ -16,6 +16,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 领养申请控制器
+ * 处理领养申请的提交、查询（个人/管理员）、审核等核心业务逻辑
+ */
 @RestController
 @RequestMapping("/api/adoption")
 @RequiredArgsConstructor
@@ -26,7 +30,11 @@ public class AdoptionController {
     private final PetService petService;
     private final UserService userService;
 
-    // 提交领养申请（领养者）
+    /**
+     * 提交领养申请
+     * @param request 包含用户名、宠物ID及详细申请信息的请求体
+     * @return 提交结果响应
+     */
     @PostMapping("/apply")
     public ResponseEntity<?> apply(@RequestBody Map<String, Object> request) {
         try {
@@ -52,6 +60,9 @@ public class AdoptionController {
                 return ResponseEntity.badRequest().body("该宠物已被领养");
             }
 
+            /*
+             * 构建申请实体，设置基础信息及扩展字段（居住类型、养宠经验等）
+             */
             AdoptionApplication application = new AdoptionApplication();
             application.setPet(pet);
             application.setAdopter(adopter);
@@ -79,7 +90,13 @@ public class AdoptionController {
         }
     }
 
-    // 查询我的申请（领养者）
+    /**
+     * 查询当前用户提交的领养申请列表（分页）
+     * @param username 用户名
+     * @param page 页码（从0开始）
+     * @param size 每页条数
+     * @return 分页的申请记录
+     */
     @GetMapping("/my-applications")
     public ResponseEntity<Page<AdoptionApplication>> getMyApplications(
             @RequestParam String username,
@@ -91,7 +108,13 @@ public class AdoptionController {
     }
 
 
-    // 查看所有申请（仅管理员）
+    /**
+     * 查看所有领养申请（仅限管理员，分页）
+     * @param username 操作用户名
+     * @param page 页码
+     * @param size 每页条数
+     * @return 分页的申请列表或错误信息
+     */
     @GetMapping("/all")
     public ResponseEntity<?> getAllApplications(
             @RequestParam String username,
@@ -113,7 +136,13 @@ public class AdoptionController {
         }
     }
 
-    // 查看待审核申请（仅管理员）
+    /**
+     * 查看待审核的领养申请（仅限管理员，分页）
+     * @param username 操作用户名
+     * @param page 页码
+     * @param size 每页条数
+     * @return 分页的待审核申请列表
+     */
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingApplications(
             @RequestParam String username,
@@ -136,7 +165,14 @@ public class AdoptionController {
     }
 
 
-    // 审核申请
+    /**
+     * 审核领养申请（通过或拒绝）
+     * 若通过申请，则自动将宠物状态更为“已领养”并拒绝该宠物其他待审申请
+     * @param applicationId 申请单ID
+     * @param username 审核员用户名
+     * @param action 操作类型：approve（通过）或 reject（拒绝）
+     * @return 审核结果响应
+     */
     @PostMapping("/review/{applicationId}")
     public ResponseEntity<?> review(
             @PathVariable Long applicationId,
@@ -160,7 +196,9 @@ public class AdoptionController {
             }
 
             if ("approve".equals(action)) {
-                // 通过申请前，检查该宠物是否已有其他申请通过
+                /*
+                 * 通过申请逻辑：校验宠物是否已被领养，更新宠物状态，并批量拒绝同宠物的其他待审申请
+                 */
                 Pet pet = application.getPet();
                 List<AdoptionApplication> petApplications = adoptionApplicationService.findByPetId(pet.getId());
 

@@ -16,6 +16,10 @@ import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 宠物管理控制器
+ * 提供宠物信息的发布、查询、修改、删除等 RESTful API 接口
+ */
 @RestController
 @RequestMapping("/api/pet")
 @RequiredArgsConstructor
@@ -25,15 +29,25 @@ public class PetController {
     private final PetService petService;
     private final UserService userService;
 
+    /**
+     * 发布宠物信息
+     * 救助者发布待领养的宠物，系统自动将宠物状态设为 AVAILABLE
+     *
+     * @param request 包含宠物基本信息的请求体，必需字段：username, name, type, gender, age, description
+     *                可选字段：photoUrl, photoUrls
+     * @return 操作结果，成功返回 "发布成功"，失败返回错误信息
+     */
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
         try {
+            // 校验救助者身份
             String username = (String) request.get("username");
             User rescuer = userService.findByUsername(username);
             if (rescuer == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
+            // 构建宠物实体对象
             Pet pet = new Pet();
             pet.setName((String) request.get("name"));
             pet.setType((String) request.get("type"));
@@ -41,6 +55,7 @@ public class PetController {
             pet.setAge(Integer.valueOf(request.get("age").toString()));
             pet.setDescription((String) request.get("description"));
 
+            // 处理宠物图片信息
             if (request.get("photoUrl") != null) {
                 pet.setPhotoUrl((String) request.get("photoUrl"));
             }
@@ -49,6 +64,7 @@ public class PetController {
                 pet.setPhotoUrls((String) request.get("photoUrls"));
             }
 
+            // 设置关联关系和初始状态
             pet.setRescuer(rescuer);
             pet.setStatus(PetStatus.AVAILABLE);
 
@@ -60,21 +76,27 @@ public class PetController {
         }
     }
 
-    @GetMapping("/list")
-    public ResponseEntity<Page<Pet>> listAvailable(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
-        return ResponseEntity.ok(petService.findAvailablePage(pageable));
-    }
-
-
+    /**
+     * 根据 ID 查询宠物详情
+     *
+     * @param id 宠物唯一标识
+     * @return 宠物实体对象，若不存在则返回 404
+     */
     @GetMapping("/{id}")
     public ResponseEntity<Pet> getById(@PathVariable Long id) {
         Pet pet = petService.findById(id);
         return pet != null ? ResponseEntity.ok(pet) : ResponseEntity.notFound().build();
     }
 
+    /**
+     * 查询当前用户发布的宠物列表（分页）
+     * 用于个人中心展示救助者自己发布的宠物
+     *
+     * @param username 救助者用户名
+     * @param page     当前页码，从 0 开始
+     * @param size     每页显示的记录数，默认 8 条
+     * @return 分页后的宠物列表数据
+     */
     @GetMapping("/my-pets")
     public ResponseEntity<Page<Pet>> getMyPets(
             @RequestParam String username,
@@ -85,30 +107,38 @@ public class PetController {
         return ResponseEntity.ok(petService.findMyPetsPage(rescuer.getId(), pageable));
     }
 
-
-    // 编辑宠物信息
+    /**
+     * 编辑宠物信息
+     * 仅允许宠物发布者本人修改信息，确保数据安全
+     *
+     * @param id      宠物唯一标识
+     * @param request 包含需要更新字段的请求体
+     * @return 操作结果，成功返回 "修改成功"，失败返回错误信息
+     */
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePet(
             @PathVariable Long id,
             @RequestBody Map<String, Object> request) {
         try {
+            // 校验操作者身份
             String username = (String) request.get("username");
             User user = userService.findByUsername(username);
             if (user == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
+            // 校验宠物是否存在
             Pet pet = petService.findById(id);
             if (pet == null) {
                 return ResponseEntity.badRequest().body("宠物不存在");
             }
 
-            // 验证是否是宠物的发布者
+            // 权限校验：仅发布者有权修改
             if (!pet.getRescuer().getId().equals(user.getId())) {
                 return ResponseEntity.badRequest().body("无权限修改");
             }
 
-            // 更新字段
+            // 按需更新宠物各属性
             if (request.get("name") != null) pet.setName((String) request.get("name"));
             if (request.get("type") != null) pet.setType((String) request.get("type"));
             if (request.get("gender") != null) pet.setGender((String) request.get("gender"));
@@ -124,23 +154,32 @@ public class PetController {
         }
     }
 
-    // 删除宠物
+    /**
+     * 删除宠物信息
+     * 仅允许宠物发布者本人删除，防止误操作
+     *
+     * @param id       宠物唯一标识
+     * @param username 操作者用户名
+     * @return 操作结果，成功返回 "删除成功"，失败返回错误信息
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePet(
             @PathVariable Long id,
             @RequestParam String username) {
         try {
+            // 校验操作者身份
             User user = userService.findByUsername(username);
             if (user == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
+            // 校验宠物是否存在
             Pet pet = petService.findById(id);
             if (pet == null) {
                 return ResponseEntity.badRequest().body("宠物不存在");
             }
 
-            // 验证是否是宠物的发布者
+            // 权限校验：仅发布者有权删除
             if (!pet.getRescuer().getId().equals(user.getId())) {
                 return ResponseEntity.badRequest().body("无权限删除");
             }
@@ -150,6 +189,42 @@ public class PetController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
         }
+    }
+
+    /**
+     * 获取可领养宠物列表（支持多条件筛选与分页）
+     * 供前端宠物列表页面展示，支持按种类、性别、年龄段和名称模糊搜索
+     *
+     * @param page   当前页码，从 0 开始
+     * @param size   每页显示的记录数，默认 12 条
+     * @param type   宠物种类筛选条件（可选）
+     * @param gender 宠物性别筛选条件（可选）
+     * @param age    年龄段筛选条件：young(1岁以下), adult(1-3岁), senior(3岁以上)
+     * @param name   宠物名称模糊搜索关键词（可选）
+     * @return 筛选并分页后的宠物列表数据
+     */
+    @GetMapping("/list")
+    public ResponseEntity<Page<Pet>> listAvailable(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String gender,
+            @RequestParam(required = false) String age,
+            @RequestParam(required = false) String name) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+
+        // 解析年龄段筛选参数
+        Integer ageMin = null, ageMax = null;
+        if ("young".equals(age)) {
+            ageMax = 0;
+        } else if ("adult".equals(age)) {
+            ageMin = 1;
+            ageMax = 3;
+        } else if ("senior".equals(age)) {
+            ageMin = 4;
+        }
+
+        return ResponseEntity.ok(petService.findFilteredAvailablePage(type, gender, ageMin, ageMax, name, pageable));
     }
 
 

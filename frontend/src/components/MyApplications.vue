@@ -49,6 +49,10 @@
 </template>
 
 <script setup>
+/**
+ * 我的领养申请管理组件
+ * 展示用户提交的领养申请记录，支持状态查看与基础交互
+ */
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -58,17 +62,31 @@ const receivedApplications = ref([])
 const currentUser = ref(null)
 const loading = ref(false)
 
+/**
+ * 获取本地存储中的当前登录用户信息
+ * @returns {Object|null} 用户信息对象，未登录则返回 null
+ */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
   try { return JSON.parse(userStr) } catch { return null }
 }
 
+/**
+ * 格式化时间为本地系统默认格式
+ * @param {string|Date} time - 原始时间数据
+ * @returns {string} 格式化后的时间字符串
+ */
 const formatTime = (time) => {
   if (!time) return '-'
   return new Date(time).toLocaleString('zh-CN')
 }
 
+/**
+ * 获取申请状态对应的 Element Plus 标签颜色类型
+ * @param {string} status - 申请状态码
+ * @returns {string} 标签颜色类型
+ */
 const getStatusType = (status) => {
   const map = {
     'PENDING': 'warning',
@@ -78,6 +96,11 @@ const getStatusType = (status) => {
   return map[status] || ''
 }
 
+/**
+ * 将申请状态码转换为中文显示
+ * @param {string} status - 申请状态码
+ * @returns {string} 中文状态文本
+ */
 const getStatusText = (status) => {
   const map = {
     'PENDING': '待审核',
@@ -87,6 +110,9 @@ const getStatusText = (status) => {
   return map[status] || status
 }
 
+/**
+ * 加载当前用户提交的领养申请列表
+ */
 const loadMyApplications = async () => {
   if (!currentUser.value) return
   loading.value = true
@@ -104,12 +130,14 @@ const loadMyApplications = async () => {
   }
 }
 
+/**
+ * 加载救助者收到的领养申请列表（预留接口，待后端补充）
+ */
 const loadReceivedApplications = async () => {
   if (!currentUser.value || currentUser.value.role !== 'RESCUER') return
   loading.value = true
   try {
-    // 这里需要后端提供一个接口来获取救助者收到的申请
-    // 暂时先留空，后续可以补充
+    // 预留接口
     receivedApplications.value = []
   } catch {
     ElMessage.error('加载失败')
@@ -118,6 +146,9 @@ const loadReceivedApplications = async () => {
   }
 }
 
+/**
+ * 根据当前激活的标签页加载对应数据
+ */
 const loadData = () => {
   if (activeTab.value === 'my') {
     loadMyApplications()
@@ -126,10 +157,16 @@ const loadData = () => {
   }
 }
 
+/**
+ * 触发全局导航事件，跳转到宠物列表页面
+ */
 const goToPetList = () => {
   window.dispatchEvent(new CustomEvent('navigate', { detail: '1' }))
 }
 
+/**
+ * 组件挂载时执行：获取用户信息并初始化加载申请数据
+ */
 onMounted(() => {
   currentUser.value = getCurrentUser()
   if (!currentUser.value) {

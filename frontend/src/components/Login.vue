@@ -126,6 +126,10 @@
 </template>
 
 <script setup>
+/**
+ * 登录/注册弹窗组件
+ * 提供用户登录和注册功能，支持表单校验与后端 API 交互
+ */
 import { ref, defineProps, defineEmits } from 'vue'
 import { ElMessage } from 'element-plus'
 
@@ -147,10 +151,17 @@ const registerForm = ref({
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
+/**
+ * 处理弹窗关闭事件，向父组件同步显示状态
+ */
 const handleClose = () => {
   emit('update:modelValue', false)
 }
 
+/**
+ * 执行用户登录操作
+ * 校验输入后请求后端登录接口，成功后触发登录成功事件
+ */
 const doLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
     ElMessage.warning('请填写用户名和密码')
@@ -182,6 +193,10 @@ const doLogin = async () => {
   }
 }
 
+/**
+ * 执行用户注册操作
+ * 校验必填项、密码一致性与长度后请求后端注册接口
+ */
 const doRegister = async () => {
   if (!registerForm.value.username || !registerForm.value.password || !registerForm.value.realName) {
     ElMessage.warning('请填写必填项')
