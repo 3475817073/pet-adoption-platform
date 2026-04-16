@@ -29,8 +29,6 @@ public class FileUploadController {
 
     /**
      * 上传图片文件
-     * @param file 前端上传的文件对象
-     * @return 包含文件访问 URL 和文件名的映射结果，或错误信息
      */
     @PostMapping("/image")
     public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
@@ -39,7 +37,7 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body("文件不能为空");
             }
 
-            /*
+            /**
              * 校验文件类型，确保仅允许上传图片格式
              */
             String contentType = file.getContentType();
@@ -47,7 +45,7 @@ public class FileUploadController {
                 return ResponseEntity.badRequest().body("只能上传图片文件");
             }
 
-            /*
+            /**
              * 确保上传目录存在，若不存在则自动创建
              */
             File uploadDir = new File(uploadPath);
@@ -55,7 +53,7 @@ public class FileUploadController {
                 uploadDir.mkdirs();
             }
 
-            /*
+            /**
              * 生成唯一文件名并保存文件到本地磁盘
              */
             String originalFilename = file.getOriginalFilename();

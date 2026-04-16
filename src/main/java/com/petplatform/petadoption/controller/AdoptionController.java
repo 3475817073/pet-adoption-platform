@@ -72,7 +72,7 @@ public class AdoptionController {
             application.setStatus(ApplicationStatus.PENDING);
             application.setApplyTime(LocalDateTime.now());
 
-            // 新增字段处理
+            // 新增字段
             application.setResidenceType((String) request.get("residenceType"));
             application.setHousingArea(request.get("housingArea") != null
                     ? Integer.valueOf(request.get("housingArea").toString())
@@ -92,10 +92,6 @@ public class AdoptionController {
 
     /**
      * 查询当前用户提交的领养申请列表（分页）
-     * @param username 用户名
-     * @param page 页码（从0开始）
-     * @param size 每页条数
-     * @return 分页的申请记录
      */
     @GetMapping("/my-applications")
     public ResponseEntity<Page<AdoptionApplication>> getMyApplications(
@@ -110,10 +106,6 @@ public class AdoptionController {
 
     /**
      * 查看所有领养申请（仅限管理员，分页）
-     * @param username 操作用户名
-     * @param page 页码
-     * @param size 每页条数
-     * @return 分页的申请列表或错误信息
      */
     @GetMapping("/all")
     public ResponseEntity<?> getAllApplications(
@@ -138,10 +130,6 @@ public class AdoptionController {
 
     /**
      * 查看待审核的领养申请（仅限管理员，分页）
-     * @param username 操作用户名
-     * @param page 页码
-     * @param size 每页条数
-     * @return 分页的待审核申请列表
      */
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingApplications(
@@ -168,10 +156,6 @@ public class AdoptionController {
     /**
      * 审核领养申请（通过或拒绝）
      * 若通过申请，则自动将宠物状态更为“已领养”并拒绝该宠物其他待审申请
-     * @param applicationId 申请单ID
-     * @param username 审核员用户名
-     * @param action 操作类型：approve（通过）或 reject（拒绝）
-     * @return 审核结果响应
      */
     @PostMapping("/review/{applicationId}")
     public ResponseEntity<?> review(

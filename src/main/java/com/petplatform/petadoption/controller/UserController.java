@@ -24,8 +24,6 @@ public class UserController {
 
     /**
      * 用户注册
-     * @param user 包含注册信息的用户实体对象
-     * @return 注册结果响应，成功则返回用户ID，失败则返回错误提示
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
@@ -34,7 +32,7 @@ public class UserController {
         }
 
 
-        /*
+        /**
          * 为确保系统权限规范，注册时强制将用户角色设置为普通用户
          */
         user.setRole(Role.USER);
@@ -46,8 +44,6 @@ public class UserController {
 
     /**
      * 用户登录
-     * @param loginUser 包含登录凭据（用户名和密码）的用户对象
-     * @return 登录结果响应，成功则返回用户详细信息，失败则返回错误提示
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User loginUser) {

@@ -33,10 +33,6 @@ public class HelpPostController {
 
     /**
      * 分页获取互助帖子列表
-     * @param page 页码（从0开始）
-     * @param size 每页条数
-     * @param sortBy 排序方式：newest（最新）或 oldest（最早）
-     * @return 分页的帖子列表
      */
     @GetMapping("/list")
     public ResponseEntity<Page<HelpPost>> list(
@@ -51,8 +47,6 @@ public class HelpPostController {
 
     /**
      * 发布新的互助帖子
-     * @param request 包含用户名、标题、内容及分类的请求体
-     * @return 发布结果响应
      */
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
@@ -79,8 +73,6 @@ public class HelpPostController {
 
     /**
      * 获取指定帖子的评论列表（组装为树形结构，包含主评论及其回复）
-     * @param postId 帖子ID
-     * @return 结构化后的评论数据列表
      */
     @GetMapping("/comments/{postId}")
     public ResponseEntity<?> getComments(@PathVariable Long postId) {
@@ -127,8 +119,6 @@ public class HelpPostController {
 
     /**
      * 添加评论或回复
-     * @param request 包含帖子ID、用户名、内容及可选父评论ID的请求体
-     * @return 操作结果响应
      */
     @PostMapping("/comment")
     public ResponseEntity<?> addComment(@RequestBody Map<String, Object> request) {
@@ -170,9 +160,6 @@ public class HelpPostController {
 
     /**
      * 删除指定的评论（仅限评论发布者本人操作）
-     * @param commentId 待删除的评论ID
-     * @param username 当前操作用户名
-     * @return 删除结果响应
      */
     @DeleteMapping("/comment/{commentId}")
     public ResponseEntity<?> deleteComment(

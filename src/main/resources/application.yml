@@ -16,6 +16,6 @@ spring:
       max-file-size: 10MB
       max-request-size: 10MB
 
-  # ??????
+  # 图片上传地址
   upload:
     path: E:\Graduation\PetAdoptPlatform\pet-upload

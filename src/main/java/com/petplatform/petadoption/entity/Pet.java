@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Data
 public class Pet {
     @Id
+    //主键自增
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 

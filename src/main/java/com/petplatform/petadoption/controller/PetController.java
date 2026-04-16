@@ -32,10 +32,6 @@ public class PetController {
     /**
      * 发布宠物信息
      * 救助者发布待领养的宠物，系统自动将宠物状态设为 AVAILABLE
-     *
-     * @param request 包含宠物基本信息的请求体，必需字段：username, name, type, gender, age, description
-     *                可选字段：photoUrl, photoUrls
-     * @return 操作结果，成功返回 "发布成功"，失败返回错误信息
      */
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
@@ -78,9 +74,6 @@ public class PetController {
 
     /**
      * 根据 ID 查询宠物详情
-     *
-     * @param id 宠物唯一标识
-     * @return 宠物实体对象，若不存在则返回 404
      */
     @GetMapping("/{id}")
     public ResponseEntity<Pet> getById(@PathVariable Long id) {
@@ -91,11 +84,6 @@ public class PetController {
     /**
      * 查询当前用户发布的宠物列表（分页）
      * 用于个人中心展示救助者自己发布的宠物
-     *
-     * @param username 救助者用户名
-     * @param page     当前页码，从 0 开始
-     * @param size     每页显示的记录数，默认 8 条
-     * @return 分页后的宠物列表数据
      */
     @GetMapping("/my-pets")
     public ResponseEntity<Page<Pet>> getMyPets(
@@ -110,10 +98,6 @@ public class PetController {
     /**
      * 编辑宠物信息
      * 仅允许宠物发布者本人修改信息，确保数据安全
-     *
-     * @param id      宠物唯一标识
-     * @param request 包含需要更新字段的请求体
-     * @return 操作结果，成功返回 "修改成功"，失败返回错误信息
      */
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePet(
@@ -157,10 +141,6 @@ public class PetController {
     /**
      * 删除宠物信息
      * 仅允许宠物发布者本人删除，防止误操作
-     *
-     * @param id       宠物唯一标识
-     * @param username 操作者用户名
-     * @return 操作结果，成功返回 "删除成功"，失败返回错误信息
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePet(
@@ -194,14 +174,6 @@ public class PetController {
     /**
      * 获取可领养宠物列表（支持多条件筛选与分页）
      * 供前端宠物列表页面展示，支持按种类、性别、年龄段和名称模糊搜索
-     *
-     * @param page   当前页码，从 0 开始
-     * @param size   每页显示的记录数，默认 12 条
-     * @param type   宠物种类筛选条件（可选）
-     * @param gender 宠物性别筛选条件（可选）
-     * @param age    年龄段筛选条件：young(1岁以下), adult(1-3岁), senior(3岁以上)
-     * @param name   宠物名称模糊搜索关键词（可选）
-     * @return 筛选并分页后的宠物列表数据
      */
     @GetMapping("/list")
     public ResponseEntity<Page<Pet>> listAvailable(

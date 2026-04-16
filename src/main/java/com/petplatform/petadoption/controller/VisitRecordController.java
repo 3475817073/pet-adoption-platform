@@ -27,8 +27,6 @@ public class VisitRecordController {
 
     /**
      * 添加回访记录
-     * @param request 包含申请ID、回访详情及后续计划等信息的请求体
-     * @return 操作结果响应
      */
     @PostMapping("/add")
     public ResponseEntity<?> addVisitRecord(@RequestBody Map<String, Object> request) {
@@ -84,8 +82,6 @@ public class VisitRecordController {
 
     /**
      * 根据申请ID查询该申请下的所有回访记录
-     * @param applicationId 领养申请ID
-     * @return 回访记录列表
      */
     @GetMapping("/list/{applicationId}")
     public ResponseEntity<?> getVisitRecords(@PathVariable Long applicationId) {
@@ -99,9 +95,6 @@ public class VisitRecordController {
 
     /**
      * 删除指定的回访记录（仅限管理员）
-     * @param id 待删除的回访记录ID
-     * @param username 当前操作用户名
-     * @return 删除结果响应
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteVisitRecord(
