@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 public class Pet {
     @Id
-    //主键自增
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
@@ -25,7 +24,7 @@ public class Pet {
     private String photoUrls;//图片地址
 
     @Enumerated(EnumType.STRING)
-    private PetStatus status = PetStatus.AVAILABLE;//状态
+    private PetStatus status = PetStatus.AVAILABLE;//默认状态
 
     @ManyToOne
     @JoinColumn(name = "rescuer_id")

@@ -1,4 +1,4 @@
-package com.petplatform.petadoption.config;
+package com.petplatform.petadoption.controller;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;

@@ -131,7 +131,7 @@ const loadMyApplications = async () => {
 }
 
 /**
- * 加载救助者收到的领养申请列表（预留接口，待后端补充）
+ * 加载救助者收到的领养申请列表
  */
 const loadReceivedApplications = async () => {
   if (!currentUser.value || currentUser.value.role !== 'RESCUER') return
