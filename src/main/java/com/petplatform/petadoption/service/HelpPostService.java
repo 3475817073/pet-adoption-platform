@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 /**
@@ -21,6 +23,7 @@ public class HelpPostService {
      * 保存或更新互助帖子信息
      */
     public HelpPost save(HelpPost helpPost) {
+
         return helpPostRepository.save(helpPost);
     }
 
@@ -28,6 +31,7 @@ public class HelpPostService {
      * 查询系统中所有的互助帖子
      */
     public List<HelpPost> findAll() {
+
         return helpPostRepository.findAll();
     }
 
@@ -35,6 +39,7 @@ public class HelpPostService {
      * 根据 ID 查找单个互助帖子
      */
     public HelpPost findById(Long id) {
+
         return helpPostRepository.findById(id).orElse(null);
     }
 
@@ -42,7 +47,15 @@ public class HelpPostService {
      * 分页查询互助帖子列表
      */
     public Page<HelpPost> findPage(Pageable pageable) {
+
         return helpPostRepository.findAll(pageable);
     }
 
+    /**
+     * 根据 ID 删除互助帖子
+     */
+    @Transactional
+    public void deleteById(Long id) {
+        helpPostRepository.deleteById(id);
+    }
 }

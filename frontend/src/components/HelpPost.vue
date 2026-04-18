@@ -42,6 +42,16 @@
           <div class="post-header">
             <el-tag :type="getCategoryType(post.category)" size="small" class="category-tag">{{ post.category }}</el-tag>
             <span class="post-time">{{ formatDateTime(post.createTime) }}</span>
+            <!-- 【新增】删除按钮：仅管理员或作者可见 -->
+            <el-button
+                v-if="currentUser && (currentUser.role === 'ADMIN' || currentUser.username === post.user?.username)"
+                type="danger"
+                size="small"
+                link
+                @click.stop="handleDeletePost(post)"              style="margin-left: auto;"
+            >
+              删除
+            </el-button>
           </div>
           <h4 class="post-title">{{ post.title }}</h4>
           <p class="post-content">{{ post.content }}</p>
@@ -192,6 +202,7 @@
 import {ref, onMounted, computed, nextTick, watch} from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
+import { Delete } from '@element-plus/icons-vue'
 
 const emit = defineEmits(['needLogin'])
 
@@ -676,6 +687,38 @@ const deleteComment = async (commentId) => {
   }
 }
 
+// 获取当前登录用户信息
+const currentUser = JSON.parse(localStorage.getItem('user'))
+
+/**
+ * 删除互助帖子
+ */
+const handleDeletePost = async (post) => {
+  if (!currentUser) {
+    ElMessage.warning('请先登录')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm('确定要删除这条互助帖吗？删除后无法恢复。', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return // 用户点击了取消
+  }
+
+  try {
+    // 调用后端接口，传入帖子ID和当前用户名
+    await del(`/api/help/post/${post.id}`, { username: currentUser.username })
+
+    ElMessage.success('删除成功')
+    loadPostsFromServer() // 【修正】这里应该是 loadPostsFromServer()
+  } catch (error) {
+    ElMessage.error(error.message || '删除失败')
+  }
+}
 </script>
 
 

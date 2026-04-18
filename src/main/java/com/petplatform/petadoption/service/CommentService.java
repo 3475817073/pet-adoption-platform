@@ -4,6 +4,8 @@ import com.petplatform.petadoption.entity.Comment;
 import com.petplatform.petadoption.repository.CommentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 /**
@@ -49,4 +51,13 @@ public class CommentService {
     public Comment findById(Long id) {
         return commentRepository.findById(id).orElse(null);
     }
+
+    /**
+     * 根据帖子 ID 删除该帖子下的所有评论
+     */
+    @Transactional
+    public void deleteByPostId(Long postId) {
+        commentRepository.deleteByPostId(postId);
+    }
+
 }

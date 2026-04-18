@@ -2,6 +2,7 @@ package com.petplatform.petadoption.controller;
 
 import com.petplatform.petadoption.entity.Comment;
 import com.petplatform.petadoption.entity.HelpPost;
+import com.petplatform.petadoption.entity.Role;
 import com.petplatform.petadoption.entity.User;
 import com.petplatform.petadoption.service.CommentService;
 import com.petplatform.petadoption.service.HelpPostService;
@@ -181,6 +182,45 @@ public class HelpPostController {
             }
 
             commentService.deleteById(commentId);
+            return ResponseEntity.ok("删除成功");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 删除互助帖子（管理员可删所有，普通用户仅可删自己的）
+     */
+    @DeleteMapping("/post/{postId}")
+    public ResponseEntity<?> deletePost(
+            @PathVariable Long postId,
+            @RequestParam String username) {
+        try {
+            // 1. 获取当前操作用户
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 2. 获取目标帖子
+            HelpPost post = helpPostService.findById(postId);
+            if (post == null) {
+                return ResponseEntity.badRequest().body("帖子不存在");
+            }
+
+            // 3. 权限校验
+            boolean isAdmin = (user.getRole() == Role.ADMIN);
+            boolean isOwner = post.getUser().getId().equals(user.getId());
+
+            if (!isAdmin && !isOwner) {
+                return ResponseEntity.status(403).body("您没有权限删除该帖子");
+            }
+
+            // 4. 【新增】先删除该帖子下的所有评论，避免外键报错
+            commentService.deleteByPostId(postId);
+
+            // 5. 执行删除帖子
+            helpPostService.deleteById(postId);
             return ResponseEntity.ok("删除成功");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
