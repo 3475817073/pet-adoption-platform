@@ -77,7 +77,7 @@
       </el-header>
 
       <el-main style="background: #FDF8F3">
-        <component :is="currentComponent" />
+        <component :is="currentComponent" @needLogin="showLoginDialog" />
       </el-main>
     </el-container>
   </el-container>
@@ -86,7 +86,7 @@
   <Login
       v-model="showLogin"
       @loginSuccess="handleLoginSuccess"
-      @needLogin="showLogin = true"
+
   />
 </template>
 
@@ -161,7 +161,6 @@ const showLoginDialog = () => {
 }
 </script>
 
-<!-- ... existing code ... -->
 
 <style>
 .sidebar-bg {

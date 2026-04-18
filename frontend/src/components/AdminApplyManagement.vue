@@ -280,6 +280,7 @@
  */
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { get, post, del } from '../utils/request.js'
 
 /** 当前激活的标签页：pending(待审核) 或 all(所有申请) */
 const activeTab = ref('pending')
@@ -331,7 +332,6 @@ const visitForm = ref({
 
 /**
  * 获取当前登录用户信息
- * @returns {Object|null} 用户信息对象，未登录返回 null
  */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
@@ -341,8 +341,6 @@ const getCurrentUser = () => {
 
 /**
  * 格式化时间为本地字符串格式
- * @param {string|Date} time - 需要格式化的时间
- * @returns {string} 格式化后的时间字符串，如 "2024/1/1 12:00:00"
  */
 const formatTime = (time) => {
   if (!time) return '-'
@@ -351,8 +349,6 @@ const formatTime = (time) => {
 
 /**
  * 格式化时间为日期格式
- * @param {string|Date} time - 需要格式化的时间
- * @returns {string} 格式化后的日期字符串，如 "2024/1/1"
  */
 const formatDate = (time) => {
   if (!time) return '-'
@@ -361,8 +357,6 @@ const formatDate = (time) => {
 
 /**
  * 将申请状态码转换为中文显示
- * @param {string} status - 申请状态码：PENDING/APPROVED/REJECTED
- * @returns {string} 中文状态文本
  */
 const statusText = (status) => {
   const map = {
@@ -375,8 +369,6 @@ const statusText = (status) => {
 
 /**
  * 将回访方式转换为中文显示
- * @param {string} type - 回访方式：PHONE/ON_SITE/ONLINE
- * @returns {string} 中文回访方式文本
  */
 const getVisitTypeText = (type) => {
   const map = {
@@ -389,8 +381,6 @@ const getVisitTypeText = (type) => {
 
 /**
  * 获取回访方式对应的标签颜色类型
- * @param {string} type - 回访方式
- * @returns {string} Element Plus Tag 组件的颜色类型
  */
 const getVisitTypeTag = (type) => {
   const map = {
@@ -403,8 +393,6 @@ const getVisitTypeTag = (type) => {
 
 /**
  * 将宠物状态转换为中文显示
- * @param {string} status - 宠物状态：HEALTHY/ADAPTING/ISSUES
- * @returns {string} 中文状态文本
  */
 const getPetStatusText = (status) => {
   const map = {
@@ -417,8 +405,6 @@ const getPetStatusText = (status) => {
 
 /**
  * 获取宠物状态对应的标签颜色类型
- * @param {string} status - 宠物状态
- * @returns {string} Element Plus Tag 组件的颜色类型
  */
 const getPetStatusTag = (status) => {
   const map = {
@@ -433,20 +419,17 @@ const getPetStatusTag = (status) => {
  * 加载待审核申请列表数据
  */
 const loadPending = async () => {
-  if (!currentUser.value) return
   pendingLoading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/adoption/pending?username=${currentUser.value.username}&page=${pendingPage.value - 1}&size=${pendingPageSize.value}`)
-    if (res.ok) {
-      const data = await res.json()
-      pendingList.value = data.content
-      pendingTotal.value = data.totalElements
-    } else {
-      const errorText = await res.text()
-      ElMessage.error('加载失败：' + errorText)
-    }
+    const data = await get('/api/adoption/pending', {
+      username: currentUser.value.username,
+      page: pendingPage.value - 1, // 后端页码从0开始
+      size: pendingPageSize.value
+    })
+    pendingList.value = data.content
+    pendingTotal.value = data.totalElements
   } catch (error) {
-    ElMessage.error('网络错误：' + error.message)
+    ElMessage.error(error.message || '加载失败')
   } finally {
     pendingLoading.value = false
   }
@@ -456,20 +439,17 @@ const loadPending = async () => {
  * 加载所有申请列表数据
  */
 const loadAll = async () => {
-  if (!currentUser.value) return
   allLoading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/adoption/all?username=${currentUser.value.username}&page=${allPage.value - 1}&size=${allPageSize.value}`)
-    if (res.ok) {
-      const data = await res.json()
-      allList.value = data.content
-      allTotal.value = data.totalElements
-    } else {
-      const errorText = await res.text()
-      ElMessage.error('加载失败：' + errorText)
-    }
+    const data = await get('/api/adoption/all', {
+      username: currentUser.value.username,
+      page: allPage.value - 1,
+      size: allPageSize.value
+    })
+    allList.value = data.content
+    allTotal.value = data.totalElements
   } catch (error) {
-    ElMessage.error('网络错误：' + error.message)
+    ElMessage.error(error.message || '加载失败')
   } finally {
     allLoading.value = false
   }
@@ -477,7 +457,6 @@ const loadAll = async () => {
 
 /**
  * 待审核列表页码变化处理
- * @param {number} page - 新的页码
  */
 const handlePendingPageChange = (page) => {
   pendingPage.value = page
@@ -486,7 +465,6 @@ const handlePendingPageChange = (page) => {
 
 /**
  * 待审核列表每页条数变化处理
- * @param {number} size - 新的每页条数
  */
 const handlePendingSizeChange = (size) => {
   pendingPageSize.value = size
@@ -496,7 +474,6 @@ const handlePendingSizeChange = (size) => {
 
 /**
  * 所有申请列表页码变化处理
- * @param {number} page - 新的页码
  */
 const handleAllPageChange = (page) => {
   allPage.value = page
@@ -505,7 +482,6 @@ const handleAllPageChange = (page) => {
 
 /**
  * 所有申请列表每页条数变化处理
- * @param {number} size - 新的每页条数
  */
 const handleAllSizeChange = (size) => {
   allPageSize.value = size
@@ -515,8 +491,6 @@ const handleAllSizeChange = (size) => {
 
 /**
  * 审核申请（通过/拒绝）
- * @param {number} applicationId - 申请记录 ID
- * @param {string} action - 操作类型：approve(通过) / reject(拒绝)
  */
 const review = (applicationId, action) => {
   const text = action === 'approve' ? '通过' : '拒绝'
@@ -526,32 +500,31 @@ const review = (applicationId, action) => {
     type: 'warning'
   }).then(async () => {
     try {
-      const res = await fetch(
-          `http://localhost:8080/api/adoption/review/${applicationId}?username=${currentUser.value.username}&action=${action}`,
-          { method: 'POST' }
-      )
-      if (res.ok) {
-        ElMessage.success(`${text}成功`)
-        loadPending()
-        loadAll()
-      } else {
-        ElMessage.error(await res.text())
-      }
-    } catch {
-      ElMessage.error('操作失败')
+      // 注意：后端这里用的是 @RequestParam，所以参数必须跟在 URL 后面
+      const url = `/api/adoption/review/${applicationId}?username=${currentUser.value.username}&action=${action}`
+
+      // 因为不需要传 Body，我们可以直接调用 fetch 或者让 post 发个空对象
+      await post(url, {})
+
+      ElMessage.success(`${text}成功`)
+      loadPending()
+      loadAll()
+    } catch (error) {
+      ElMessage.error(error.message || '操作失败')
     }
   }).catch(() => {})
 }
 
 /**
  * 打开添加回访记录弹窗
- * @param {Object} application - 当前审核通过的申请记录
  */
 const showVisitDialog = async (application) => {
   currentApplication.value = application
+
+  // 重置表单
   visitForm.value = {
     visitType: 'PHONE',
-    visitTime: new Date().toISOString().slice(0, 16),
+    visitTime: new Date().toISOString().slice(0, 19),
     petStatus: 'HEALTHY',
     content: '',
     feedback: '',
@@ -559,20 +532,17 @@ const showVisitDialog = async (application) => {
     nextVisitTime: ''
   }
 
+  // 加载历史回访记录，尝试带出“下次回访时间”
   try {
-    const res = await fetch(`http://localhost:8080/api/visit/list/${application.id}`)
-    if (res.ok) {
-      visitHistory.value = await res.json()
-      if (visitHistory.value.length > 0) {
-        const latest = visitHistory.value[0]
-        if (latest.needFollowUp && latest.nextVisitTime) {
-          visitForm.value.nextVisitTime = latest.nextVisitTime
-          visitForm.value.needFollowUp = true
-        }
+    const history = await get(`/api/visit/list/${application.id}`)
+    if (history && history.length > 0) {
+      const lastVisit = history[0]
+      if (lastVisit.nextVisitTime) {
+        visitForm.value.nextVisitTime = lastVisit.nextVisitTime
       }
     }
   } catch (error) {
-    console.error(error)
+    console.error('加载回访历史失败', error)
   }
 
   visitDialogVisible.value = true
@@ -582,32 +552,31 @@ const showVisitDialog = async (application) => {
  * 提交回访记录
  */
 const submitVisitRecord = async () => {
-  if (!visitForm.value.visitType || !visitForm.value.visitTime || !visitForm.value.petStatus) {
+  if (!visitForm.value.visitTime || !visitForm.value.petStatus) {
     ElMessage.warning('请填写必填项')
     return
   }
 
   submitting.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/visit/add', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: currentUser.value.username,
-        applicationId: currentApplication.value.id,
-        ...visitForm.value
-      })
+    // 调用封装好的 post 方法，第二个参数会自动转为 JSON Body
+    await post('/api/visit/add', {
+      username: currentUser.value.username,
+      applicationId: currentApplication.value.id,
+      visitType: visitForm.value.visitType,
+      visitTime: visitForm.value.visitTime,
+      petStatus: visitForm.value.petStatus,
+      content: visitForm.value.content,
+      feedback: visitForm.value.feedback,
+      needFollowUp: visitForm.value.needFollowUp,
+      nextVisitTime: visitForm.value.nextVisitTime
     })
 
-    if (res.ok) {
-      ElMessage.success('回访记录添加成功')
-      visitDialogVisible.value = false
-      loadAll()
-    } else {
-      ElMessage.error(await res.text())
-    }
+    ElMessage.success('回访记录添加成功')
+    visitDialogVisible.value = false
+    loadAll() // 刷新所有申请列表
   } catch (error) {
-    ElMessage.error('网络错误')
+    ElMessage.error(error.message || '添加失败')
   } finally {
     submitting.value = false
   }
@@ -615,46 +584,37 @@ const submitVisitRecord = async () => {
 
 /**
  * 查看回访历史记录
- * @param {Object} application - 当前审核通过的申请记录
  */
 const viewVisitHistory = async (application) => {
   currentApplication.value = application
   try {
-    const res = await fetch(`http://localhost:8080/api/visit/list/${application.id}`)
-    if (res.ok) {
-      visitHistory.value = await res.json()
-      historyDialogVisible.value = true
-    } else {
-      ElMessage.error(await res.text())
-    }
+    visitHistory.value = await get(`/api/visit/list/${application.id}`)
+    historyDialogVisible.value = true // 打开历史弹窗
   } catch (error) {
-    ElMessage.error('加载失败')
+    ElMessage.error(error.message || '加载回访历史失败')
   }
 }
 
 /**
  * 删除回访记录
- * @param {number} recordId - 回访记录 ID
  */
-const deleteVisitRecord = async (recordId) => {
+const deleteVisitRecord = (visitId) => {
   ElMessageBox.confirm('确定要删除这条回访记录吗？', '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/visit/${recordId}?username=${currentUser.value.username}`, {
-        method: 'DELETE'
-      })
-      if (res.ok) {
-        ElMessage.success('删除成功')
-        visitHistory.value = visitHistory.value.filter(r => r.id !== recordId)
-        loadAll()
-      } else {
-        ElMessage.error(await res.text())
+      // 修复：将 username 作为第二个参数传入，request.js 会处理成 ?username=xxx
+      await del(`/api/visit/${visitId}`, { username: currentUser.value.username })
+
+      ElMessage.success('删除成功')
+      // 重新加载当前申请的回访历史
+      if (currentApplication.value) {
+        viewVisitHistory(currentApplication.value)
       }
-    } catch {
-      ElMessage.error('删除失败')
+    } catch (error) {
+      ElMessage.error(error.message || '删除失败')
     }
   }).catch(() => {})
 }

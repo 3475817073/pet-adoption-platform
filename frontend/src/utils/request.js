@@ -90,6 +90,13 @@ export function post(url, body) {
 /**
  * DELETE 请求快捷方法
  */
-export function del(url) {
-    return request(url, { method: 'DELETE' })
+export function del(url,params) {
+    return request(url, { method: 'DELETE', params })
+}
+
+/**
+ * PUT 请求快捷方法
+ */
+export function put(url, body) {
+    return request(url, { method: 'PUT', body })
 }

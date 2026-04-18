@@ -134,6 +134,7 @@
  */
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { post } from '../utils/request.js'
 
 const emit = defineEmits(['needLogin'])
 
@@ -151,8 +152,6 @@ const uploadedUrls = ref([])
 
 /**
  * 上传前校验：检查文件类型是否为图片且大小不超过 5MB
- * @param {File} file - 待上传的文件对象
- * @returns {boolean} 校验结果
  */
 const beforeUpload = (file) => {
   const isImage = file.type.startsWith('image/')
@@ -171,9 +170,6 @@ const beforeUpload = (file) => {
 
 /**
  * 图片上传成功回调
- * @param {Object} response - 后端返回的响应数据
- * @param {Object} file - 当前上传的文件对象
- * @param {Array} fileList - 当前文件列表
  */
 const handleUploadSuccess = (response, file, fileList) => {
   if (response.url) {
@@ -205,11 +201,7 @@ const publishPet = async () => {
     return
   }
 
-  loading.value = true
-
-  const userStr = localStorage.getItem('user')
-  const user = JSON.parse(userStr)
-
+  const user = JSON.parse(localStorage.getItem('user'))
   const data = {
     name: form.value.name,
     type: form.value.type,
@@ -225,24 +217,16 @@ const publishPet = async () => {
   }
 
   try {
-    const res = await fetch('http://localhost:8080/api/pet/publish', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
+    await post('/api/pet/publish', data)
+    ElMessage.success('宠物发布成功！')
 
-    if (res.ok) {
-      ElMessage.success('宠物发布成功！')
-      form.value = { name: '', type: '', gender: '', age: 1, description: '' }
-      imageList.value = []
-      uploadedUrls.value = []
-    } else {
-      ElMessage.error(await res.text())
-    }
+    // 重置表单
+    form.value = { name: '', type: '', gender: '公', age: 1, description: '' }
+    uploadedUrls.value = []
+    imageList.value = []
+
   } catch (error) {
-    ElMessage.error('网络错误')
-  } finally {
-    loading.value = false
+    ElMessage.error(error.message)
   }
 }
 </script>

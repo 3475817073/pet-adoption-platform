@@ -132,6 +132,7 @@
  */
 import { ref, defineProps, defineEmits } from 'vue'
 import { ElMessage } from 'element-plus'
+import { post } from '../utils/request.js'
 
 const props = defineProps({ modelValue: Boolean })
 const emit = defineEmits(['update:modelValue', 'loginSuccess'])
@@ -145,7 +146,6 @@ const registerForm = ref({
   confirmPassword: '',
   realName: '',
   phone: '',
-  // role: 'ADOPTER'
 })
 
 const loginLoading = ref(false)
@@ -170,24 +170,15 @@ const doLogin = async () => {
 
   loginLoading.value = true
   try {
-    const res = await fetch('http://localhost:8080/api/user/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loginForm.value)
-    })
+    const data = await post('/api/user/login', loginForm.value)
 
-    if (res.ok) {
-      const data = await res.json()
-      ElMessage.success('登录成功！')
-      emit('loginSuccess', data)
-      emit('update:modelValue', false)
-      loginForm.value = { username: '', password: '' }
-    } else {
-      const error = await res.text()
-      ElMessage.error(error || '登录失败')
-    }
+    ElMessage.success('登录成功！')
+    emit('loginSuccess', data)
+    emit('update:modelValue', false)
+    loginForm.value = { username: '', password: '' }
+
   } catch (error) {
-    ElMessage.error('网络错误，请检查后端是否启动')
+    ElMessage.error(error.message)
   } finally {
     loginLoading.value = false
   }
@@ -195,7 +186,6 @@ const doLogin = async () => {
 
 /**
  * 执行用户注册操作
- * 校验必填项、密码一致性与长度后请求后端注册接口
  */
 const doRegister = async () => {
   if (!registerForm.value.username || !registerForm.value.password || !registerForm.value.realName) {
@@ -216,30 +206,22 @@ const doRegister = async () => {
   registerLoading.value = true
   try {
     const { confirmPassword, ...submitData } = registerForm.value
-    const res = await fetch('http://localhost:8080/api/user/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submitData)
-    })
+    await post('/api/user/register', submitData)
 
-    if (res.ok) {
-      const result = await res.text()
-      ElMessage.success('注册成功！')
-      registerForm.value = {
-        username: '',
-        password: '',
-        confirmPassword: '',
-        realName: '',
-        phone: ''
-        // role: 'ADOPTER'
-      }
-      tab.value = 'login'
-    } else {
-      const error = await res.text()
-      ElMessage.error(error || '注册失败')
+    ElMessage.success('注册成功！')
+    registerForm.value = {
+      username: '',
+      password: '',
+      confirmPassword: '',
+      realName: '',
+      phone: ''
     }
+    tab.value = 'login'
+
   } catch (error) {
-    ElMessage.error('网络错误，请检查后端是否启动')
+    // 增强错误提示，方便调试
+    console.error("注册失败详情:", error)
+    ElMessage.error(error.message || '注册失败，请检查输入或联系管理员')
   } finally {
     registerLoading.value = false
   }

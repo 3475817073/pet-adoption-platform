@@ -1,10 +1,10 @@
 package com.petplatform.petadoption.controller;
 
-import com.petplatform.petadoption.entity.Pet;
-import com.petplatform.petadoption.entity.PetStatus;
-import com.petplatform.petadoption.entity.User;
+import com.petplatform.petadoption.entity.*;
+import com.petplatform.petadoption.service.AdoptionApplicationService;
 import com.petplatform.petadoption.service.PetService;
 import com.petplatform.petadoption.service.UserService;
+import com.petplatform.petadoption.service.VisitRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +28,8 @@ public class PetController {
 
     private final PetService petService;
     private final UserService userService;
+    private final AdoptionApplicationService adoptionApplicationService;
+    private final VisitRecordService visitRecordService;
 
     /**
      * 发布宠物信息
@@ -147,26 +149,38 @@ public class PetController {
             @PathVariable Long id,
             @RequestParam String username) {
         try {
-            // 校验操作者身份
             User user = userService.findByUsername(username);
             if (user == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
-            // 校验宠物是否存在
             Pet pet = petService.findById(id);
             if (pet == null) {
                 return ResponseEntity.badRequest().body("宠物不存在");
             }
 
-            // 权限校验：仅发布者有权删除
-            if (!pet.getRescuer().getId().equals(user.getId())) {
+            // 权限校验：只有发布者或管理员可以删除
+            if (!pet.getRescuer().getId().equals(user.getId()) && user.getRole() != com.petplatform.petadoption.entity.Role.ADMIN) {
                 return ResponseEntity.badRequest().body("无权限删除");
             }
 
+            // ✅ 核心修复：先删除关联的申请和回访记录
+            List<AdoptionApplication> applications = adoptionApplicationService.findByPetId(id);
+            for (AdoptionApplication app : applications) {
+                // 1. 先删该申请下的所有回访记录
+                List<VisitRecord> visits = visitRecordService.findByApplicationId(app.getId());
+                for (VisitRecord visit : visits) {
+                    visitRecordService.delete(visit.getId());
+                }
+                // 2. 再删申请本身
+                adoptionApplicationService.delete(app.getId());
+            }
+
+            // 3. 最后删除宠物
             petService.delete(pet);
             return ResponseEntity.ok("删除成功");
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
         }
     }

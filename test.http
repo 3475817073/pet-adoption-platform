@@ -3,11 +3,11 @@ POST http://localhost:8080/api/user/register
 Content-Type: application/json
 
 {
-  "username": "rescuer001",
+  "username": "user234",
   "password": "123456",
-  "realName": "张救助",
-  "phone": "13800138001",
-  "role": "RESCUER"
+  "realName": "张某",
+  "phone": "13800138005",
+  "role": "USER"
 }
 
 ### 2. 注册领养者
@@ -15,11 +15,11 @@ POST http://localhost:8080/api/user/register
 Content-Type: application/json
 
 {
-  "username": "adopter001",
+  "username": "user345",
   "password": "123456",
-  "realName": "李领养",
-  "phone": "13800138002",
-  "role": "ADOPTER"
+  "realName": "李某",
+  "phone": "13800138006",
+  "role": "USER"
 }
 
 ### 3. 注册管理员
@@ -30,7 +30,7 @@ Content-Type: application/json
   "username": "admin001",
   "password": "admin123",
   "realName": "系统管理员",
-  "phone": "13800138000",
+  "phone": "13800138999",
   "role": "ADMIN"
 }
 
@@ -39,7 +39,7 @@ POST http://localhost:8080/api/user/login
 Content-Type: application/json
 
 {
-  "username": "adopter001",
+  "username": "user234",
   "password": "123456"
 }
 
@@ -52,17 +52,15 @@ Content-Type: application/json
   "password": "admin123"
 }
 
-### 6. 发布宠物（使用已存在的救助者）
+### 6. 发布宠物
 POST http://localhost:8080/api/pet/publish
 Content-Type: application/json
 
 {
-  "name": "小狗豆豆",
+  "name": "小橘",
   "type": "狗",
   "gender": "公",
   "age": 2,
-  "description": "性格温顺，已绝育，健康良好",
-  "rescuer": {
-    "id": 1
-  }
+  "description": "性格温顺已绝育",
+  "username": "admin001"
 }

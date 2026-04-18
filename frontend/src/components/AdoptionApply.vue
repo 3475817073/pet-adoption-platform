@@ -154,7 +154,6 @@ const submitApply = async () => {
 /**
  * 监听弹窗显示状态变化
  * 当弹窗关闭时向父组件触发 close 事件
- * @param {boolean} newVal - 新的显示状态
  */
 watch(visible, (newVal) => {
   if (!newVal) emit('close')

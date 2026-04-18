@@ -226,7 +226,6 @@ watch([filterType, filterGender, filterAge, searchKeyword], () => {
 
 /**
  * 处理每页显示条数变化
- * @param {number} newSize - 新的每页条数
  */
 const handleSizeChange = (newSize) => {
   pageSize.value = newSize
@@ -236,7 +235,6 @@ const handleSizeChange = (newSize) => {
 
 /**
  * 处理页码变化
- * @param {number} newPage - 目标页码
  */
 const handleCurrentChange = (newPage) => {
   currentPage.value = newPage
@@ -256,7 +254,6 @@ const handleJumpPage = () => {
 
 /**
  * 打开宠物详情弹窗，解析并处理宠物图片数据
- * @param {Object} pet - 选中的宠物对象
  */
 const showDetail = (pet) => {
 
@@ -277,8 +274,6 @@ const showDetail = (pet) => {
 
 /**
  * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
- * @param {Object} pet - 宠物对象
- * @returns {string|null} 完整的图片 URL 或 null
  */
 const getPetImageUrl = (pet) => {
   if (pet.photoUrl) {
@@ -314,7 +309,6 @@ const applyFromDetail = () => {
 
 /**
  * 从列表页触发领养申请，校验登录状态与宠物领养状态
- * @param {Object} pet - 待申请的宠物对象
  */
 const applyAdopt = (pet) => {
   if (!localStorage.getItem('user')) {

@@ -6,58 +6,77 @@ import com.petplatform.petadoption.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.petplatform.petadoption.entity.Role;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 用户控制器
- * 处理用户的注册、登录等基础身份认证业务
- */
 @RestController
 @RequestMapping("/api/user")
-@RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserService userService;
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
 
     /**
-     * 用户注册
+     * 注册接口
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
-        if (userService.existsByUsername(user.getUsername())) {
-            return ResponseEntity.badRequest().body("用户名已存在！");
+        try {
+            if (userService.existsByUsername(user.getUsername())) {
+                return ResponseEntity.badRequest().body("用户名已存在！");
+            }
+
+            user.setRole(Role.USER);
+            // 加密密码
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+
+            userService.save(user);
+
+            // 只返回简单的字符串，不要拼接 saved.getId()，防止 User 对象序列化报错
+            return ResponseEntity.ok("注册成功");
+
+        } catch (Exception e) {
+            // 打印详细错误
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("注册系统异常：" + e.getMessage());
         }
-
-
-        /**
-         * 为确保系统权限规范，注册时强制将用户角色设置为普通用户
-         */
-        user.setRole(Role.USER);
-
-        User saved = userService.save(user);
-        return ResponseEntity.ok("注册成功！你的ID是：" + saved.getId());
     }
 
-
     /**
-     * 用户登录
+     * 登录接口（支持旧密码自动升级）
      */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody User loginUser) {
-        User user = userService.findByUsername(loginUser.getUsername());
-        if (user == null || !user.getPassword().equals(loginUser.getPassword())) {
-            return ResponseEntity.badRequest().body("用户名或密码错误！");
-        }
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
+        try {
+            String username = credentials.get("username");
+            String inputPassword = credentials.get("password");
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("message", "登录成功！");
-        result.put("userId", user.getId());
-        result.put("username", user.getUsername());
-        result.put("role", user.getRole());
-        result.put("realName", user.getRealName());
-        return ResponseEntity.ok(result);
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(401).body("用户不存在");
+            }
+
+            // 使用 BCrypt 进行统一比对
+            if (!passwordEncoder.matches(inputPassword, user.getPassword())) {
+                return ResponseEntity.status(401).body("密码错误");
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", user.getId());
+            result.put("username", user.getUsername());
+            result.put("realName", user.getRealName());
+            result.put("role", user.getRole());
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("登录系统异常：" + e.getMessage());
+        }
     }
 }

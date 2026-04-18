@@ -203,7 +203,6 @@ const sortBy = ref('newest')
 
 /**
  * 根据搜索关键词和分类动态过滤帖子列表
- * @returns {Array} 过滤后的帖子数组
  */
 const filteredPosts = computed(() => {
   let result = [...posts.value]
@@ -272,7 +271,6 @@ const jumpPage = ref(1)
 
 /**
  * 获取本地存储中的当前登录用户信息
- * @returns {Object|null} 用户信息对象，未登录则返回 null
  */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
@@ -282,8 +280,6 @@ const getCurrentUser = () => {
 
 /**
  * 判断当前用户是否有权删除指定评论
- * @param {string} commentUser - 评论发布者用户名
- * @returns {boolean} 是否有权删除
  */
 const canDelete = (commentUser) => {
   const user = getCurrentUser()
@@ -297,7 +293,6 @@ const checkLoginStatus = () => { isLoggedIn.value = !!localStorage.getItem('user
 
 /**
  * 计算当前帖子下的总评论数（包含主评论和回复）
- * @returns {number} 评论总数
  */
 const totalComments = computed(() => {
   let count = 0
@@ -310,8 +305,6 @@ const totalComments = computed(() => {
 
 /**
  * 根据帖子分类返回对应的 Element Plus 标签颜色类型
- * @param {string} category - 帖子分类名称
- * @returns {string} 标签类型字符串
  */
 const getCategoryType = (category) => {
   const typeMap = {
@@ -324,8 +317,6 @@ const getCategoryType = (category) => {
 
 /**
  * 格式化日期时间为 YYYY-MM-DD HH:mm 格式
- * @param {string|Date} dateTime - 原始时间数据
- * @returns {string} 格式化后的时间字符串
  */
 const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
@@ -340,8 +331,6 @@ const formatDateTime = (dateTime) => {
 
 /**
  * 格式化评论时间为本地系统默认格式
- * @param {string} timeStr - 原始时间字符串
- * @returns {string} 格式化后的时间字符串
  */
 const formatCommentTime = (timeStr) => {
   if (!timeStr) return ''
@@ -396,7 +385,6 @@ const loadPostsFromServer = async () => {
 
 /**
  * 处理页码变化，重新请求数据
- * @param {number} page - 目标页码
  */
 const handlePageChange = (page) => {
   currentPage.value = page
@@ -405,7 +393,6 @@ const handlePageChange = (page) => {
 
 /**
  * 处理每页显示条数变化，重置页码并重新请求
- * @param {number} size - 新的每页条数
  */
 const handleSizeChange = (size) => {
   pageSize.value = size
@@ -472,7 +459,6 @@ const submitPost = async () => {
 
 /**
  * 打开帖子详情弹窗并加载对应评论数据
- * @param {Object} post - 选中的帖子对象
  */
 const showDetail = async (post) => {
   currentPost.value = post
@@ -482,7 +468,6 @@ const showDetail = async (post) => {
 
 /**
  * 根据帖子 ID 从后端加载评论列表
- * @param {number} postId - 帖子唯一标识
  */
 const loadComments = async (postId) => {
   commentsLoading.value = true
@@ -533,8 +518,6 @@ const submitComment = async () => {
 
 /**
  * 提交回复（可回复主评论或二级回复）
- * @param {number} commentId - 父级评论 ID
- * @param {string} type - 回复类型标识
  */
 const submitReply = async (commentId, type) => {
   if (!replyText.value.trim()) {
@@ -571,7 +554,6 @@ const submitReply = async (commentId, type) => {
 
 /**
  * 切换某条评论下回复的展开/收起状态
- * @param {number} commentId - 评论 ID
  */
 const toggleReplies = (commentId) => {
   expandedReplies.value[commentId] = !expandedReplies.value[commentId]
@@ -579,7 +561,6 @@ const toggleReplies = (commentId) => {
 
 /**
  * 显示主评论的回复输入框
- * @param {Object} comment - 目标主评论对象
  */
 const showMainReplyBox = (comment) => {
   const index = comments.value.indexOf(comment)
@@ -591,8 +572,6 @@ const showMainReplyBox = (comment) => {
 
 /**
  * 显示二级回复的回复输入框
- * @param {number} index - 父级评论在数组中的索引
- * @param {Object} reply - 目标回复对象
  */
 const showReplyReplyBox = (index, reply) => {
   replyBoxIndex.value = index
@@ -603,7 +582,6 @@ const showReplyReplyBox = (index, reply) => {
 
 /**
  * 提交对主评论的回复
- * @param {number} commentId - 主评论 ID
  */
 const submitReplyToMain = async (commentId) => {
   await submitReply(commentId, 'main')
@@ -611,8 +589,6 @@ const submitReplyToMain = async (commentId) => {
 
 /**
  * 提交对二级回复的回复
- * @param {number} commentId - 所属主评论 ID
- * @param {number} replyId - 目标回复 ID
  */
 const submitReplyToReply = async (commentId, replyId) => {
   await submitReply(commentId, 'reply')
@@ -620,9 +596,6 @@ const submitReplyToReply = async (commentId, replyId) => {
 
 /**
  * 获取当前应显示的回复列表（默认显示前 3 条，展开后显示全部）
- * @param {Object} comment - 主评论对象
- * @param {number} index - 主评论索引
- * @returns {Array} 可见的回复数组
  */
 const getVisibleReplies = (comment, index) => {
   if (!comment.replies || comment.replies.length === 0) return []
@@ -632,7 +605,6 @@ const getVisibleReplies = (comment, index) => {
 
 /**
  * 切换指定索引评论的回复展开状态
- * @param {number} index - 评论索引
  */
 const toggleExpand = (index) => {
   expandedReplies.value[index] = !expandedReplies.value[index]
@@ -642,12 +614,12 @@ const toggleExpand = (index) => {
  * 触发父组件的登录引导事件
  */
 const handleNeedLogin = () => {
+  detailVisible.value = false
   emit('needLogin')
 }
 
 /**
  * 删除主评论的快捷方法
- * @param {number} commentId - 主评论 ID
  */
 const deleteMainComment = async (commentId) => {
   await deleteComment(commentId)
@@ -655,7 +627,6 @@ const deleteMainComment = async (commentId) => {
 
 /**
  * 删除二级回复的快捷方法
- * @param {number} replyId - 回复 ID
  */
 const deleteReply = async (replyId) => {
   await deleteComment(replyId)
@@ -663,9 +634,6 @@ const deleteReply = async (replyId) => {
 
 /**
  * 显示通用回复输入框（保留兼容）
- * @param {number} index - 评论索引
- * @param {string} type - 回复类型
- * @param {number} replyId - 目标回复 ID
  */
 const showReplyBox = (index, type, replyId = -1) => {
   replyBoxIndex.value = index
@@ -686,7 +654,6 @@ const cancelReply = () => {
 
 /**
  * 删除指定评论（含确认弹窗与权限校验）
- * @param {number} commentId - 待删除评论 ID
  */
 const deleteComment = async (commentId) => {
   try {

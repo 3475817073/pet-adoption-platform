@@ -5,35 +5,48 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Spring Security 安全配置类
- * 针对前后端分离架构进行简化配置，开放所有接口权限并禁用默认认证机制
- */
+import java.util.Arrays;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    /**
-     * 配置安全过滤链
-     * @param http HttpSecurity 对象，用于配置 HTTP 安全策略
-     * @return SecurityFilterChain 构建完成的安全过滤链
-     * @throws Exception 配置过程中可能抛出的异常
-     */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        /*
-         * 关闭 CSRF 防护、允许所有请求访问、并禁用默认的表单登录与 Basic Auth
-         * 适用于前后端分离且由应用层自行处理身份校验的场景
-         */
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 1. 关闭 CSRF 防御（前后端分离项目通常需要关闭，否则会报 403）
                 .csrf(csrf -> csrf.disable())
+
+                // 2. 开启并配置 CORS（解决你看到的 'Access-Control-Allow-Origin' 报错）
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // 3. 暂时放开所有接口的访问权限（允许登录/注册接口被访问）
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll()
-                )
-                .formLogin(form -> form.disable())
-                .httpBasic(basic -> basic.disable());
+                        .requestMatchers("/**").permitAll()
+                );
 
         return http.build();
+    }
+
+    // 定义跨域配置源
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        // 允许所有来源（开发阶段方便，生产环境建议指定具体域名）
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        // 允许所有请求方法（GET, POST, PUT, DELETE 等）
+        configuration.setAllowedMethods(Arrays.asList("*"));
+        // 允许所有请求头
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        // 允许携带 Cookie/Token 信息
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }

@@ -175,6 +175,7 @@
  */
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { get, put, del } from '../utils/request.js'
 
 const user = ref(null)
 const activeTab = ref('pets')
@@ -217,8 +218,6 @@ const getRoleColor = (role) => {
 
 /**
  * 将用户角色标识转换为中文显示
- * @param {string} role - 用户角色标识
- * @returns {string} 中文角色文本
  */
 const getRoleText = (role) => {
   const texts = { ADMIN: '管理员', USER: '普通用户' }
@@ -228,8 +227,6 @@ const getRoleText = (role) => {
 
 /**
  * 获取申请状态对应的标签颜色类型
- * @param {string} status - 申请状态码
- * @returns {string} Element Plus Tag 组件的颜色类型
  */
 const getStatusColor = (status) => {
   const colors = { PENDING: 'warning', APPROVED: 'success', REJECTED: 'danger' }
@@ -238,8 +235,6 @@ const getStatusColor = (status) => {
 
 /**
  * 将申请状态码转换为中文显示
- * @param {string} status - 申请状态码
- * @returns {string} 中文状态文本
  */
 const getStatusText = (status) => {
   const texts = { PENDING: '待审核', APPROVED: '已通过', REJECTED: '已拒绝' }
@@ -248,8 +243,6 @@ const getStatusText = (status) => {
 
 /**
  * 格式化日期时间为本地系统格式
- * @param {string} dateStr - 原始日期字符串
- * @returns {string} 格式化后的时间字符串
  */
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
@@ -258,8 +251,6 @@ const formatDate = (dateStr) => {
 
 /**
  * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
- * @param {Object} pet - 宠物对象
- * @returns {string|null} 完整的图片 URL 或 null
  */
 const getPetImageUrl = (pet) => {
   if (pet.photoUrl) {
@@ -295,29 +286,30 @@ const loadUserData = async () => {
     const username = user.value.username
 
     // 加载我的发布（分页）
-    const petsRes = await fetch(`http://localhost:8080/api/pet/my-pets?username=${username}&page=${petsCurrentPage.value - 1}&size=${petsPageSize.value}`)
-    if (petsRes.ok) {
-      const petsData = await petsRes.json()
-      publishedPets.value = petsData.content
-      petsTotal.value = petsData.totalElements
-    }
+    const petsData = await get('/api/pet/my-pets', {
+      username,
+      page: petsCurrentPage.value - 1,
+      size: petsPageSize.value
+    })
+    publishedPets.value = petsData.content
+    petsTotal.value = petsData.totalElements
 
     // 加载我的申请（分页）
-    const appsRes = await fetch(`http://localhost:8080/api/adoption/my-applications?username=${username}&page=${appsCurrentPage.value - 1}&size=${appsPageSize.value}`)
-    if (appsRes.ok) {
-      const appsData = await appsRes.json()
-      myApplications.value = appsData.content
-      appsTotal.value = appsData.totalElements
-    }
+    const appsData = await get('/api/adoption/my-applications', {
+      username,
+      page: appsCurrentPage.value - 1,
+      size: appsPageSize.value
+    })
+    myApplications.value = appsData.content
+    appsTotal.value = appsData.totalElements
+
   } catch (error) {
-    ElMessage.error('加载数据失败')
-    console.error(error)
+    ElMessage.error(error.message || '加载数据失败')
   }
 }
 
 /**
  * 宠物列表页码变化处理
- * @param {number} page - 新的页码
  */
 const handlePetsPageChange = (page) => {
   petsCurrentPage.value = page
@@ -326,7 +318,6 @@ const handlePetsPageChange = (page) => {
 
 /**
  * 宠物列表每页条数变化处理
- * @param {number} size - 新的每页条数
  */
 const handlePetsSizeChange = (size) => {
   petsPageSize.value = size
@@ -336,7 +327,6 @@ const handlePetsSizeChange = (size) => {
 
 /**
  * 申请列表页码变化处理
- * @param {number} page - 新的页码
  */
 const handleAppsPageChange = (page) => {
   appsCurrentPage.value = page
@@ -345,7 +335,6 @@ const handleAppsPageChange = (page) => {
 
 /**
  * 申请列表每页条数变化处理
- * @param {number} size - 新的每页条数
  */
 const handleAppsSizeChange = (size) => {
   appsPageSize.value = size
@@ -356,7 +345,6 @@ const handleAppsSizeChange = (size) => {
 
 /**
  * 打开编辑宠物弹窗，初始化表单数据
- * @param {Object} pet - 待编辑的宠物对象
  */
 const editPet = (pet) => {
   editingPet.value = pet
@@ -391,28 +379,20 @@ const saveEdit = async () => {
   const user = JSON.parse(userStr)
 
   try {
-    const res = await fetch(`http://localhost:8080/api/pet/${editingPet.value.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: user.username,
-        name: editForm.value.name,
-        type: editForm.value.type,
-        gender: editForm.value.gender,
-        age: editForm.value.age,
-        description: editForm.value.description
-      })
+    await put(`/api/pet/${editingPet.value.id}`, {
+      username: user.username,
+      name: editForm.value.name,
+      type: editForm.value.type,
+      gender: editForm.value.gender,
+      age: editForm.value.age,
+      description: editForm.value.description
     })
 
-    if (res.ok) {
-      ElMessage.success('修改成功')
-      editDialogVisible.value = false
-      await loadUserData()
-    } else {
-      ElMessage.error(await res.text())
-    }
+    ElMessage.success('修改成功')
+    editDialogVisible.value = false
+    await loadUserData()
   } catch (error) {
-    ElMessage.error('修改失败')
+    ElMessage.error(error.message || '修改失败')
   } finally {
     saving.value = false
   }
@@ -422,7 +402,6 @@ const saveEdit = async () => {
 /**
  * 删除指定宠物信息
  * 弹出确认框，校验权限后向 DELETE 接口发送请求
- * @param {number} petId - 待删除宠物的 ID
  */
 const deletePet = (petId) => {
   ElMessageBox.confirm('确定要删除这个宠物信息吗？此操作不可恢复', '确认删除', {
@@ -439,18 +418,11 @@ const deletePet = (petId) => {
     const user = JSON.parse(userStr)
 
     try {
-      const res = await fetch(`http://localhost:8080/api/pet/${petId}?username=${user.username}`, {
-        method: 'DELETE'
-      })
-
-      if (res.ok) {
-        ElMessage.success('删除成功')
-        await loadUserData()
-      } else {
-        ElMessage.error(await res.text())
-      }
+      await del(`/api/pet/${petId}`, { username: user.username })
+      ElMessage.success('删除成功')
+      await loadUserData()
     } catch (error) {
-      ElMessage.error('删除失败')
+      ElMessage.error(error.message || '删除失败')
     }
   }).catch(() => {})
 }

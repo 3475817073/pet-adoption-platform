@@ -81,4 +81,11 @@ public class AdoptionApplicationService {
         return applicationRepository.findByAdopterId(adopterId, pageable);
     }
 
+    /**
+     * 根据 ID 删除指定的领养申请
+     */
+    public void delete(Long id) {
+        applicationRepository.deleteById(id);
+    }
+
 }

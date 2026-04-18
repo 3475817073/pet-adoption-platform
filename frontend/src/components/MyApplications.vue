@@ -55,6 +55,7 @@
  */
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { get } from '../../utils/request'
 
 const activeTab = ref('my')
 const myApplications = ref([])
@@ -64,7 +65,6 @@ const loading = ref(false)
 
 /**
  * 获取本地存储中的当前登录用户信息
- * @returns {Object|null} 用户信息对象，未登录则返回 null
  */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
@@ -74,8 +74,6 @@ const getCurrentUser = () => {
 
 /**
  * 格式化时间为本地系统默认格式
- * @param {string|Date} time - 原始时间数据
- * @returns {string} 格式化后的时间字符串
  */
 const formatTime = (time) => {
   if (!time) return '-'
@@ -84,8 +82,6 @@ const formatTime = (time) => {
 
 /**
  * 获取申请状态对应的 Element Plus 标签颜色类型
- * @param {string} status - 申请状态码
- * @returns {string} 标签颜色类型
  */
 const getStatusType = (status) => {
   const map = {
@@ -98,8 +94,6 @@ const getStatusType = (status) => {
 
 /**
  * 将申请状态码转换为中文显示
- * @param {string} status - 申请状态码
- * @returns {string} 中文状态文本
  */
 const getStatusText = (status) => {
   const map = {
@@ -117,21 +111,17 @@ const loadMyApplications = async () => {
   if (!currentUser.value) return
   loading.value = true
   try {
-    const res = await fetch(`http://localhost:8080/api/adoption/my-applications?username=${currentUser.value.username}`)
-    if (res.ok) {
-      myApplications.value = await res.json()
-    } else {
-      ElMessage.error(await res.text())
-    }
-  } catch {
-    ElMessage.error('加载失败')
+    const data = await get('/api/adoption/my-applications', { username: currentUser.value.username })
+    myApplications.value = data
+  } catch (error) {
+    ElMessage.error(error.message || '加载失败')
   } finally {
     loading.value = false
   }
 }
 
 /**
- * 加载救助者收到的领养申请列表
+ * 加载救助者收到的领养申请列
  */
 const loadReceivedApplications = async () => {
   if (!currentUser.value || currentUser.value.role !== 'RESCUER') return
