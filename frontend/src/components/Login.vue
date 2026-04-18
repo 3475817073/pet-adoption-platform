@@ -205,6 +205,7 @@ const doRegister = async () => {
 
   registerLoading.value = true
   try {
+    //使用解构赋值剔除 confirmPassword，避免提交给后端
     const { confirmPassword, ...submitData } = registerForm.value
     await post('/api/user/register', submitData)
 
