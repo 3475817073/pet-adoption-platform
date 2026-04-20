@@ -3,9 +3,6 @@ const BASE_URL = 'http://localhost:8080'
 
 /**
  * 统一请求封装
- * @param {string} url - API 路径（如 '/api/pet/list'）
- * @param {object} options - 请求配置
- * @returns {Promise<any>} 响应数据
  */
 export async function request(url, options = {}) {
     // 获取用户信息

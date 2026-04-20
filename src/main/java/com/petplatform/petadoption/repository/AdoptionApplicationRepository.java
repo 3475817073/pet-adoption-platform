@@ -22,7 +22,7 @@ public interface AdoptionApplicationRepository extends JpaRepository<AdoptionApp
     List<AdoptionApplication> findByPetId(Long petId);
 
     /**
-     * 根据领养者 ID 查询其提交的所有申请（不分页）
+     * 根据领养者 ID 查询其提交的所有申请
      */
     List<AdoptionApplication> findByAdopterId(Long adopterId);
 
@@ -32,7 +32,7 @@ public interface AdoptionApplicationRepository extends JpaRepository<AdoptionApp
     Page<AdoptionApplication> findByAdopterId(Long adopterId, Pageable pageable);
 
     /**
-     * 根据状态查询所有申请记录（不分页）
+     * 根据状态查询所有申请记录
      */
     List<AdoptionApplication> findByStatus(ApplicationStatus status);
 }

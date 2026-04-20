@@ -83,7 +83,7 @@ public class PetService {
                 pageable);
 
         /**
-         * 由于 JPA 方法名查询对数值范围支持有限，此处采用内存流式处理对年龄进行二次过滤
+         * 年龄二次过滤
          */
         if (ageMin != null || ageMax != null) {
             List<Pet> filtered = page.getContent().stream()

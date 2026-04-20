@@ -164,7 +164,7 @@ public class PetController {
                 return ResponseEntity.badRequest().body("无权限删除");
             }
 
-            // ✅ 核心修复：先删除关联的申请和回访记录
+            // 先删除关联的申请和回访记录
             List<AdoptionApplication> applications = adoptionApplicationService.findByPetId(id);
             for (AdoptionApplication app : applications) {
                 // 1. 先删该申请下的所有回访记录
