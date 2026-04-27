@@ -57,7 +57,7 @@
                 show-password
                 class="custom-input" />
           </el-form-item>
-          <el-button style="width:100%" type="primary" @click="doLogin" :loading="loginLoading" class="submit-btn">
+          <el-button style="width:100%"  @click="doLogin" :loading="loginLoading" class="diagonal-btn">
             登录
           </el-button>
         </el-form>
@@ -109,7 +109,7 @@
                 prefix-icon="Phone"
                 class="custom-input" />
           </el-form-item>
-          <el-button style="width:100%" type="primary" @click="doRegister" :loading="registerLoading" class="submit-btn">
+          <el-button style="width:100%"  @click="doRegister" :loading="registerLoading" class="diagonal-btn">
             注册
           </el-button>
         </el-form>
@@ -220,7 +220,6 @@ const doRegister = async () => {
     tab.value = 'login'
 
   } catch (error) {
-    // 增强错误提示，方便调试
     console.error("注册失败详情:", error)
     ElMessage.error(error.message || '注册失败，请检查输入或联系管理员')
   } finally {
@@ -322,4 +321,45 @@ const doRegister = async () => {
   color: #E07A5F;
   font-weight: 500;
 }
+
+/* 对角线扫过动画按钮 - 修正版 */
+.diagonal-btn {
+  color: #E07A5F !important;
+  border: 2px solid #E07A5F !important;
+  background-color: transparent !important; /* 强制透明背景 */
+  position: relative !important;
+  overflow: hidden !important; /* 确保色块不溢出 */
+  z-index: 1 !important; /* 建立层叠上下文 */
+  transition: color 0.4s ease !important;
+  border-radius: 12px !important;
+  height: 48px !important;
+  font-weight: bold !important;
+}
+
+/* 悬停时文字变白 */
+.diagonal-btn:hover {
+  color: white !important;
+  border-color: #E07A5F !important;
+}
+
+/* 扫描色块 */
+.diagonal-btn::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important; /* 从左侧开始 */
+  width: 0% !important;
+  height: 100% !important;
+  background-color: #E07A5F !important;
+  transform: skewX(-20deg) translateX(-10%) !important; /* 倾斜并稍微左移 */
+  transform-origin: left !important;
+  z-index: -1 !important; /* 确保在文字下方 */
+  transition: width 0.4s ease !important;
+}
+
+/* 悬停时色块展开 */
+.diagonal-btn:hover::before {
+  width: 120% !important; /* 展开宽度覆盖整个按钮 */
+}
+
 </style>

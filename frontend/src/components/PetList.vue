@@ -55,7 +55,7 @@
 
             <!-- 状态标签 -->
             <el-tag v-if="pet.status === 'ADOPTED'" class="status-tag adopted">已找到家 🏠</el-tag>
-            <el-tag v-else class="status-tag available">等待领养 💕</el-tag>
+            <el-tag v-else class="status-tag available">等待领养 </el-tag>
 
             <!-- 悬浮遮罩 -->
             <div class="hover-overlay">
@@ -68,7 +68,14 @@
               {{ pet.name }}
               <span class="pet-detail">（{{ pet.gender }} · {{ pet.age }}岁）</span>
             </h3>
-            <el-tag size="small" class="type-tag">{{ pet.type }}</el-tag>
+
+            <!-- 新增：列表页标签预览 -->
+            <div v-if="pet.tags" class="card-tags">
+              <span v-for="(tag, i) in JSON.parse(pet.tags).slice(0, 2)" :key="i" class="mini-tag">
+                {{ tag }}
+              </span>
+            </div>
+
             <p class="description">{{ pet.description }}</p>
             <el-button type="primary" class="adopt-btn" :disabled="pet.status === 'ADOPTED'" @click="applyAdopt(pet)">
               {{ pet.status === 'ADOPTED' ? '已被领养' : '我要领养' }}
@@ -97,49 +104,83 @@
 
     <el-empty v-if="pets.length === 0 && !loading" description="暂无符合条件的宠物" :image-size="200" />
 
-    <!-- 宠物详情弹窗：展示多张图片与详细介绍 -->
-    <el-dialog v-model="detailVisible" :title="selectedPet?.name" width="700px">
+    <!-- 宠物详情弹窗：仿 Petfinder 左右分栏风格 -->
+    <el-dialog v-model="detailVisible" width="900px" class="pet-detail-dialog" :show-close="true">
       <div v-if="selectedPet" class="pet-detail-container">
-        <div class="detail-images">
-          <div v-if="selectedPet.photos && selectedPet.photos.length > 0">
-            <img :src="'http://localhost:8080' + selectedPet.photos[0]" class="main-image" />
-            <div v-if="selectedPet.photos.length > 1" class="thumbnail-list">
-              <img
-                  v-for="(photo, index) in selectedPet.photos.slice(1)"
-                  :key="index"
-                  :src="'http://localhost:8080' + photo"
-                  class="thumbnail"
-              />
-            </div>
+        <!-- 左侧：图片画廊 -->
+        <div class="detail-gallery">
+          <div class="main-image-wrapper">
+            <img v-if="selectedPet.photos && selectedPet.photos.length > 0"
+                 :src="'http://localhost:8080' + selectedPet.photos[0]"
+                 class="main-image" />
+            <div v-else class="no-image-large">🐾</div>
           </div>
-          <div v-else class="no-image-large">🐾</div>
+          <!-- 缩略图列表 -->
+          <div v-if="selectedPet.photos && selectedPet.photos.length > 1" class="thumbnail-list">
+            <img
+                v-for="(photo, index) in selectedPet.photos.slice(1)"
+                :key="index"
+                :src="'http://localhost:8080' + photo"
+                class="thumbnail"
+            />
+          </div>
         </div>
 
-        <div class="detail-info">
-          <h2>{{ selectedPet.name }}</h2>
-          <div class="detail-tags">
-            <el-tag class="type-tag">{{ selectedPet.type }}</el-tag>
-            <el-tag class="gender-tag">{{ selectedPet.gender }}</el-tag>
-            <el-tag class="age-tag">{{ selectedPet.age }}岁</el-tag>
-            <el-tag :class="selectedPet.status === 'ADOPTED' ? 'status-tag adopted' : 'status-tag available'">
-              {{ selectedPet.status === 'ADOPTED' ? '已被领养' : '可领养' }}
-            </el-tag>
+        <!-- 右侧：详细信息 -->
+        <div class="detail-content">
+          <div class="detail-header">
+            <h2>{{ selectedPet.name }}</h2>
+            <div class="basic-tags">
+              <el-tag class="tag-gender">{{ selectedPet.gender }}</el-tag>
+              <el-tag class="tag-age">{{ selectedPet.age }} 岁</el-tag>
+              <el-tag class="tag-type">{{ selectedPet.type }}</el-tag>
+            </div>
           </div>
 
-          <div class="detail-description">
-            <h4>📝 宠物介绍</h4>
-            <p class="description-text">{{ selectedPet.description }}</p>
+          <div class="detail-section">
+            <h4>📝 关于 {{ selectedPet.name }}</h4>
+            <p class="story-text">{{ selectedPet.description || '这只小家伙正在等待一个温暖的家...' }}</p>
+          </div>
+
+          <div v-if="selectedPet.tags && selectedPet.tags.length > 0" class="detail-section">
+            <h4>✨ 性格特征</h4>
+            <div class="personality-tags">
+              <el-tag
+                  v-for="(tag, index) in getSafeTags(selectedPet.tags)"
+                  :key="index"
+                  class="p-tag"
+                  effect="light">
+                {{ tag }}
+              </el-tag>
+            </div>
+          </div>
+
+          <div class="detail-section">
+            <h4>💉 健康状况</h4>
+            <div class="health-grid">
+              <div class="health-item" :class="{ 'inactive': !selectedPet.isVaccinated }">
+                {{ selectedPet.isVaccinated ? '✅' : '❌' }} 已疫苗
+              </div>
+              <div class="health-item" :class="{ 'inactive': !selectedPet.isNeutered }">
+                {{ selectedPet.isNeutered ? '✅' : '❌' }} 已绝育
+              </div>
+              <div class="health-item" :class="{ 'inactive': !selectedPet.isDewormed }">
+                {{ selectedPet.isDewormed ? '✅' : '❌' }} 已驱虫
+              </div>
+            </div>
           </div>
 
           <div class="detail-actions">
-            <el-button type="primary" size="large" :disabled="selectedPet.status === 'ADOPTED'" @click="applyFromDetail"
-                       style="background: #E07A5F; border-color: #E07A5F; border-radius: 24px; padding: 12px 32px">
-              {{ selectedPet.status === 'ADOPTED' ? '已被领养' : '我要领养' }}
+            <el-button type="primary" size="large" class="apply-btn"
+                       :disabled="selectedPet.status === 'ADOPTED'"
+                       @click="applyFromDetail">
+              {{ selectedPet.status === 'ADOPTED' ? '已被领养' : '申请领养' }}
             </el-button>
           </div>
         </div>
       </div>
     </el-dialog>
+
 
 
     <AdoptionApply
@@ -294,6 +335,21 @@ const getPetImageUrl = (pet) => {
 }
 
 /**
+ * 安全解析标签，防止 JSON 格式错误或空值导致页面崩溃
+ */
+const getSafeTags = (tagsStr) => {
+  if (!tagsStr) return []
+  try {
+    const parsed = JSON.parse(tagsStr)
+    return Array.isArray(parsed) ? parsed : []
+  } catch (e) {
+    console.warn('标签格式解析失败:', tagsStr)
+    return [] // 如果解析失败，返回空数组，保证页面不崩
+  }
+}
+
+
+/**
  * 从详情页触发领养申请，校验登录状态
  */
 const applyFromDetail = () => {
@@ -347,27 +403,33 @@ const resetFilter = () => {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid #E5E7EB;
+  border: 1px solid #F3F4F6;
   background: white;
 }
+
 .pet-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(61,64,91,0.12);
+  transform: translateY(-8px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
+
 .image-container {
   position: relative;
   overflow: hidden;
   cursor: pointer;
+  height: 240px;
 }
+
 .pet-image {
   width: 100%;
-  height: 240px;
+  height: 100%;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  transition: transform 0.6s ease;
 }
+
 .pet-card:hover .pet-image {
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
+
 .no-image {
   width: 100%;
   height: 240px;
@@ -377,267 +439,202 @@ const resetFilter = () => {
   justify-content: center;
   font-size: 80px;
 }
+
 .status-tag {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 2;
-  font-weight: 500;
+  font-weight: 600;
   border: none;
   padding: 6px 12px;
-  border-radius: 16px;
+  border-radius: 20px;
   font-size: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-.status-tag.available {
-  background: #81B29A;
-  color: white;
-}
-.status-tag.adopted {
-  background: #E07A5F;
-  color: white;
-}
+
+.status-tag.available { background: #D1FAE5; color: #065F46; }
+.status-tag.adopted { background: #FEE2E2; color: #991B1B; }
+
 .hover-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(61, 64, 91, 0.6);
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to top, rgba(61, 64, 91, 0.8), rgba(61, 64, 91, 0.2));
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
-.pet-card:hover .hover-overlay {
-  opacity: 1;
-}
+
+.pet-card:hover .hover-overlay { opacity: 1; }
+
 .view-btn {
-  transform: translateY(20px);
-  transition: transform 0.3s ease;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
   background: #E07A5F;
   border-color: #E07A5F;
-  border-radius: 20px;
-}
-.pet-card:hover .view-btn {
-  transform: translateY(0);
-}
-.pet-info {
-  padding: 16px;
-}
-.pet-name {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #3D405B;
-  cursor: pointer;
+  border-radius: 24px;
   font-weight: 600;
 }
-.pet-name:hover {
-  color: #E07A5F;
+
+.pet-card:hover .view-btn { transform: translateY(0); }
+
+.pet-info { padding: 20px; }
+
+.pet-name {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #1F2937;
+  cursor: pointer;
+  font-weight: 700;
 }
-.pet-detail {
-  color: #E07A5F;
-  font-size: 14px;
-  font-weight: normal;
-}
+
+.pet-name:hover { color: #E07A5F; }
+
+.pet-detail { color: #6B7280; font-size: 14px; font-weight: 400; }
+
 .type-tag {
-  background: #F2CC8F;
-  color: #3D405B;
-  border-color: #F2CC8F;
-  border-radius: 12px;
+  background: #FEF3C7; color: #D97706; border-color: #FEF3C7;
+  border-radius: 8px; font-weight: 500;
 }
-.gender-tag {
-  background: #81B29A;
-  color: white;
-  border-color: #81B29A;
-  border-radius: 12px;
-}
-.age-tag {
-  background: #F2CC8F;
-  color: #3D405B;
-  border-color: #F2CC8F;
-  border-radius: 12px;
-}
+
 .description {
   margin: 12px 0;
-  color: #6B7280;
+  color: #4B5563;
   line-height: 1.6;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 14px;
 }
+
 .adopt-btn {
-  width: 100%;
-  margin-top: 10px;
-  background: #E07A5F;
-  border-color: #E07A5F;
-  font-weight: 500;
-  border-radius: 20px;
-}
-.adopt-btn:disabled {
-  background: #D1D5DB;
-  border-color: #D1D5DB;
-  cursor: not-allowed;
+  width: 100%; margin-top: 12px;
+  background: #E07A5F; border-color: #E07A5F;
+  font-weight: 600; border-radius: 12px;
 }
 
-.detail-images {
-  flex: 1;
+.adopt-btn:disabled { background: #D1D5DB; border-color: #D1D5DB; }
+
+/* --- 详情页样式 (仿 Petfinder 布局) --- */
+.pet-detail-dialog :deep(.el-dialog__header) { display: none; }
+.pet-detail-dialog :deep(.el-dialog__body) { padding: 20px; }
+
+.pet-detail-container {
+  display: flex;
+  gap: 30px;
 }
+
+.detail-gallery { flex: 1.2; }
+
 .main-image {
   width: 100%;
-  height: 300px;
+  height: 400px;
   object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 10px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
+
 .thumbnail-list {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  margin-top: 12px;
 }
+
 .thumbnail {
-  width: 80px;
-  height: 80px;
+  width: 70px; height: 70px;
   object-fit: cover;
   border-radius: 8px;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: all 0.3s;
+  transition: all 0.2s;
 }
-.thumbnail:hover {
-  border-color: #E07A5F;
-  transform: scale(1.05);
+
+.thumbnail:hover { border-color: #E07A5F; }
+
+.detail-content { flex: 1; display: flex; flex-direction: column; }
+
+.detail-header h2 {
+  font-size: 32px;
+  color: #1F2937;
+  margin: 0 0 12px 0;
 }
-.no-image-large {
-  width: 100%;
-  height: 300px;
-  background: linear-gradient(135deg, #FDF8F3 0%, #F2CC8F 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 100px;
+
+.basic-tags { display: flex; gap: 8px; margin-bottom: 24px; }
+.tag-gender { background: #DBEAFE; color: #1E40AF; border: none; }
+.tag-age { background: #D1FAE5; color: #065F46; border: none; }
+.tag-type { background: #FEF3C7; color: #92400E; border: none; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-section h4 { color: #374151; margin-bottom: 8px; font-size: 16px; }
+
+.story-text {
+  line-height: 1.8;
+  color: #4B5563;
+  font-size: 15px;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.health-item {
+  background: #F9FAFB;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+}
+
+.apply-btn {
+  margin-top: auto;
+  background: #E07A5F;
+  border: none;
   border-radius: 12px;
+  height: 50px;
+  font-size: 16px;
+  font-weight: bold;
 }
 
-.pet-detail-container {
-  display: flex;
-  gap: 20px;
-}
-.detail-info {
-  flex: 1;
-}
-.detail-info h2 {
-  margin: 0 0 15px 0;
-  color: #3D405B;
-  font-weight: 600;
-}
-.detail-tags {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-.detail-description {
-  margin-bottom: 25px;
-}
-.detail-description h4 {
-  margin: 0 0 10px 0;
-  color: #6B7280;
-}
-.detail-description p {
-  line-height: 1.8;
-  color: #3D405B;
-  white-space: pre-wrap;
-}
-.detail-actions {
-  margin-top: 20px;
-}
-
-.detail-description p {
-  line-height: 1.8;
-  color: #3D405B;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: break-word;
-}
-
-.description-text {
-  line-height: 1.8;
-  color: #3D405B;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-.reply-to { color: #81B29A; font-size: 12px; }
-
+/* --- 分页样式 --- */
 .pagination-wrapper {
   margin-top: 30px;
   display: flex;
   justify-content: center;
   padding: 20px 0;
 }
-
-.custom-pagination :deep(.el-pagination__total) {
-  font-size: 14px;
-  color: #6B7280;
-  margin-right: 20px;
-}
-
-.custom-pagination :deep(.el-pagination__sizes) {
-  margin: 0 15px;
-}
-
-.custom-pagination :deep(.el-pagination__jump) {
-  margin-left: 20px;
-}
-
-.custom-pagination :deep(.el-pager li) {
-  min-width: 36px;
-  height: 36px;
-  line-height: 36px;
-  border-radius: 8px;
-  margin: 0 4px;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
 .custom-pagination :deep(.el-pager li.active) {
-  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
+  background: #E07A5F;
   color: white;
-  border: none;
-  font-weight: 600;
+}
+.personality-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.p-tag {
+  background: #FDF2F8 !important; /* 浅粉色背景 */
+  color: #BE185D !important;       /* 深粉色文字 */
+  border-color: #FBCFE8 !important;
+  border-radius: 6px;
+  font-weight: 500;
+}
+.card-tags {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.mini-tag {
+  font-size: 12px;
+  color: #BE185D;
+  background: #FDF2F8;
+  padding: 2px 8px;
+  border-radius: 4px;
 }
 
-.custom-pagination :deep(.el-pager li:hover:not(.active)) {
-  background-color: #FDF8F3;
-  color: #E07A5F;
-}
-
-.custom-pagination :deep(.btn-prev),
-.custom-pagination :deep(.btn-next) {
-  min-width: 36px;
-  height: 36px;
-  line-height: 36px;
-  border-radius: 8px;
-  padding: 0;
-  border: 1px solid #E5E7EB;
-  background: white;
-  transition: all 0.3s;
-}
-
-.custom-pagination :deep(.btn-prev:hover),
-.custom-pagination :deep(.btn-next:hover) {
-  color: #E07A5F;
-  border-color: #E07A5F;
-}
-
-.custom-pagination :deep(.el-select) {
-  --el-select-border-radius-hover: 8px;
-}
-
-.custom-pagination :deep(.el-input__wrapper) {
-  border-radius: 8px;
-}
 </style>

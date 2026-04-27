@@ -19,6 +19,12 @@ public class Pet {
     private String description;//描述
 
     private String photoUrl;//图片地址
+    private String tags;//宠物标签
+
+    private boolean isVaccinated = false;
+    private boolean isNeutered = false;
+    private boolean isDewormed = false;
+
 
     @Column(length = 1000)
     private String photoUrls;//图片地址

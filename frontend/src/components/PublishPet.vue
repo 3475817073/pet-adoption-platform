@@ -87,6 +87,35 @@
                     class="styled-textarea" />
               </el-form-item>
             </div>
+            <!-- 新增：健康状态勾选 -->
+            <div class="form-row">
+              <el-form-item label="健康状态">
+                <div class="health-checkboxes">
+                  <el-checkbox v-model="form.isVaccinated" border size="large">💉 已疫苗</el-checkbox>
+                  <el-checkbox v-model="form.isNeutered" border size="large">✂️ 已绝育</el-checkbox>
+                  <el-checkbox v-model="form.isDewormed" border size="large">🦠 已驱虫</el-checkbox>
+                </div>
+              </el-form-item>
+            </div>
+
+            <!-- 性格标签选择 -->
+            <div class="form-row">
+              <el-form-item label="性格标签">
+                <el-select
+                    v-model="form.tags"
+                    multiple
+                    filterable
+                    allow-create
+                    default-first-option
+                    placeholder="请选择或输入标签（如：活泼、亲人）"
+                    class="styled-input">
+                  <el-option label="活泼好动" value="活泼"></el-option>
+                  <el-option label="安静温顺" value="安静"></el-option>
+                  <el-option label="粘人精" value="亲人"></el-option>
+                  <el-option label="高冷独立" value="高冷"></el-option>
+                </el-select>
+              </el-form-item>
+            </div>
 
             <div class="form-row photo-upload-section">
               <el-form-item label="照片">
@@ -143,7 +172,11 @@ const form = ref({
   type: '',
   gender: '',
   age: 1,
-  description: ''
+  description: '',
+  isVaccinated: false,
+  isNeutered: false,
+  isDewormed: false,
+  tags: []
 })
 
 const loading = ref(false)
@@ -208,7 +241,12 @@ const publishPet = async () => {
     gender: form.value.gender,
     age: form.value.age,
     description: form.value.description,
-    username: user.username
+    username: user.username,
+    tags: JSON.stringify(form.value.tags),
+    // 新增：传递健康状态
+    isVaccinated: form.value.isVaccinated,
+    isNeutered: form.value.isNeutered,
+    isDewormed: form.value.isDewormed
   }
 
   if (uploadedUrls.value.length > 0) {
@@ -221,7 +259,7 @@ const publishPet = async () => {
     ElMessage.success('宠物发布成功！')
 
     // 重置表单
-    form.value = { name: '', type: '', gender: '公', age: 1, description: '' }
+    form.value = { name: '', type: '', gender: '公', age: 1, description: '', tags: [] }
     uploadedUrls.value = []
     imageList.value = []
 
@@ -526,5 +564,10 @@ const publishPet = async () => {
   .form-card {
     padding: 20px;
   }
-}
+}.health-checkboxes {
+   display: flex;
+   gap: 15px;
+   flex-wrap: wrap;
+ }
+
 </style>

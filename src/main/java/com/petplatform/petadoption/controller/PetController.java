@@ -58,8 +58,13 @@ public class PetController {
                 pet.setPhotoUrl((String) request.get("photoUrl"));
             }
 
+            // 处理图片列表信息
             if (request.get("photoUrls") != null) {
                 pet.setPhotoUrls((String) request.get("photoUrls"));
+            }
+            // 处理标签信息
+            if (request.get("tags") != null) {
+                pet.setTags((String) request.get("tags"));
             }
 
             // 设置关联关系和初始状态

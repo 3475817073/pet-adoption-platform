@@ -22,10 +22,10 @@
       </svg>
 
       <div style="position: relative; z-index: 1; padding: 35px 20px; text-align: center">
-        <div style="font-size: 52px; margin-bottom: 12px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3))">🐾</div>
+        <div style="font-size: 52px; margin-bottom: 12px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3))">🐱</div>
         <div style="font-size: 17px; font-weight: 600; color: #FDF8F3; line-height: 1.6; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2)">
           宠物领养平台<br/>
-          <span style="font-size: 11px; opacity: 0.9; font-weight: 400">让爱不再流浪</span>
+          <span style="font-size: 11px; opacity: 0.9; font-weight: 400"></span>
         </div>
       </div>
 
