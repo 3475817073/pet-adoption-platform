@@ -158,14 +158,14 @@
           <div class="detail-section">
             <h4>💉 健康状况</h4>
             <div class="health-grid">
-              <div class="health-item" :class="{ 'inactive': !selectedPet.isVaccinated }">
-                {{ selectedPet.isVaccinated ? '✅' : '❌' }} 已疫苗
+              <div class="health-item" :class="{ 'inactive': !selectedPet.vaccinated }">
+                {{ selectedPet.vaccinated ? '✅' : '❌' }} 已疫苗
               </div>
-              <div class="health-item" :class="{ 'inactive': !selectedPet.isNeutered }">
-                {{ selectedPet.isNeutered ? '✅' : '❌' }} 已绝育
+              <div class="health-item" :class="{ 'inactive': !selectedPet.neutered }">
+                {{ selectedPet.neutered ? '✅' : '❌' }} 已绝育
               </div>
-              <div class="health-item" :class="{ 'inactive': !selectedPet.isDewormed }">
-                {{ selectedPet.isDewormed ? '✅' : '❌' }} 已驱虫
+              <div class="health-item" :class="{ 'inactive': !selectedPet.dewormed }">
+                {{ selectedPet.dewormed ? '✅' : '❌' }} 已驱虫
               </div>
             </div>
           </div>

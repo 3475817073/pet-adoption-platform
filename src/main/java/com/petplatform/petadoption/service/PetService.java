@@ -2,6 +2,7 @@ package com.petplatform.petadoption.service;
 
 import com.petplatform.petadoption.entity.Pet;
 import com.petplatform.petadoption.entity.PetStatus;
+import com.petplatform.petadoption.entity.PostStatus;
 import com.petplatform.petadoption.repository.PetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -68,23 +69,33 @@ public class PetService {
     }
 
     /**
+     * 分页查询待审核的宠物列表
+     */
+    public Page<Pet> findPendingPage(Pageable pageable) {
+        return petRepository.findByReviewStatus(PostStatus.PENDING, pageable);
+    }
+
+    /**
+     * 分页查询已拒绝的宠物列表
+     */
+    public Page<Pet> findRejectedPage(Pageable pageable) {
+        return petRepository.findByReviewStatus(PostStatus.REJECTED, pageable);
+    }
+
+    /**
      * 多条件筛选并分页查询可领养宠物
      * 支持按种类、性别、名称进行模糊匹配，并按年龄范围进行过滤
      */
     public Page<Pet> findFilteredAvailablePage(String type, String gender, Integer ageMin, Integer ageMax, String name, Pageable pageable) {
-        /**
-         * 首先利用 Repository 的方法对种类、性别和名称进行数据库层面的模糊查询
-         */
-        Page<Pet> page = petRepository.findByStatusAndTypeContainingAndGenderContainingAndNameContaining(
+        // 按条件筛选
+        Page<Pet> page = petRepository.findByReviewStatusAndStatusAndTypeContainingAndGenderContainingAndNameContaining(
+                PostStatus.APPROVED,
                 PetStatus.AVAILABLE,
                 type != null ? type : "",
                 gender != null ? gender : "",
                 name != null ? name : "",
                 pageable);
-
-        /**
-         * 年龄二次过滤
-         */
+        // 按年龄范围过滤
         if (ageMin != null || ageMax != null) {
             List<Pet> filtered = page.getContent().stream()
                     .filter(pet -> {

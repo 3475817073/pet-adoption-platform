@@ -2,6 +2,7 @@ package com.petplatform.petadoption.repository;
 
 import com.petplatform.petadoption.entity.Pet;
 import com.petplatform.petadoption.entity.PetStatus;
+import com.petplatform.petadoption.entity.PostStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -35,4 +36,16 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
      */
     Page<Pet> findByStatusAndTypeContainingAndGenderContainingAndNameContaining(
             PetStatus status, String type, String gender, String name, Pageable pageable);
+
+    /**
+     * 根据审核状态分页查询宠物列表
+     */
+    Page<Pet> findByReviewStatus(PostStatus reviewStatus, Pageable pageable);
+
+
+    /**
+     * 根据审核状态、宠物状态、种类、性别及名称进行多条件模糊查询并分页
+     */
+    Page<Pet> findByReviewStatusAndStatusAndTypeContainingAndGenderContainingAndNameContaining(
+            PostStatus reviewStatus, PetStatus status, String type, String gender, String name, Pageable pageable);
 }

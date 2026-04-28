@@ -1,6 +1,7 @@
 package com.petplatform.petadoption.service;
 
 import com.petplatform.petadoption.entity.HelpPost;
+import com.petplatform.petadoption.entity.PostStatus;
 import com.petplatform.petadoption.repository.HelpPostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -57,5 +58,26 @@ public class HelpPostService {
     @Transactional
     public void deleteById(Long id) {
         helpPostRepository.deleteById(id);
+    }
+
+    /**
+     * 分页查询审核通过的帖子
+     */
+    public Page<HelpPost> findApprovedPage(Pageable pageable) {
+        return helpPostRepository.findByStatus(PostStatus.APPROVED, pageable);
+    }
+
+    /**
+     * 分页查询待审核的帖子
+     */
+    public Page<HelpPost> findPendingPage(Pageable pageable) {
+        return helpPostRepository.findByStatus(PostStatus.PENDING, pageable);
+    }
+
+    /**
+     * 分页查询被拒绝的帖子
+     */
+    public Page<HelpPost> findRejectedPage(Pageable pageable) {
+        return helpPostRepository.findByStatus(PostStatus.REJECTED, pageable);
     }
 }

@@ -42,7 +42,7 @@ public class HelpPostController {
             @RequestParam(defaultValue = "newest") String sortBy) {
         Sort.Direction direction = "oldest".equals(sortBy) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "createTime"));
-        return ResponseEntity.ok(helpPostService.findPage(pageable));
+        return ResponseEntity.ok(helpPostService.findApprovedPage(pageable));
     }
 
 
@@ -64,9 +64,10 @@ public class HelpPostController {
             post.setTitle((String) request.get("title"));
             post.setContent((String) request.get("content"));
             post.setCategory((String) request.get("category"));
+            post.setStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
 
             helpPostService.save(post);
-            return ResponseEntity.ok("发布成功");
+            return ResponseEntity.ok("发布成功，请等待管理员审核");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("发布失败：" + e.getMessage());
         }
@@ -216,7 +217,7 @@ public class HelpPostController {
                 return ResponseEntity.status(403).body("您没有权限删除该帖子");
             }
 
-            // 4. 【新增】先删除该帖子下的所有评论，避免外键报错
+            // 4. 先删除该帖子下的所有评论，避免外键报错
             commentService.deleteByPostId(postId);
 
             // 5. 执行删除帖子
@@ -224,6 +225,95 @@ public class HelpPostController {
             return ResponseEntity.ok("删除成功");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取已拒绝的帖子列表（仅限管理员，分页）
+     */
+    @GetMapping("/rejected")
+    public ResponseEntity<?> getRejectedPosts(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+            Page<HelpPost> posts = helpPostService.findRejectedPage(pageable);
+            return ResponseEntity.ok(posts);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取待审核的帖子列表（仅限管理员，分页）
+     */
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingPosts(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createTime"));
+            Page<HelpPost> posts = helpPostService.findPendingPage(pageable);
+            return ResponseEntity.ok(posts);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 审核帖子
+     */
+    @PostMapping("/review/{postId}")
+    public ResponseEntity<?> reviewPost(
+            @PathVariable Long postId,
+            @RequestParam String username,
+            @RequestParam String action) {
+        try {
+            User admin = userService.findByUsername(username);
+            if (admin == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (admin.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限操作");
+            }
+
+            HelpPost post = helpPostService.findById(postId);
+            if (post == null) {
+                return ResponseEntity.badRequest().body("帖子不存在");
+            }
+
+            if (post.getStatus() != com.petplatform.petadoption.entity.PostStatus.PENDING) {
+                return ResponseEntity.badRequest().body("该帖子已审核，不能重复操作");
+            }
+
+            if ("approve".equals(action)) {
+                post.setStatus(com.petplatform.petadoption.entity.PostStatus.APPROVED);
+            } else if ("reject".equals(action)) {
+                post.setStatus(com.petplatform.petadoption.entity.PostStatus.REJECTED);
+            } else {
+                return ResponseEntity.badRequest().body("无效的操作");
+            }
+
+            helpPostService.save(post);
+            return ResponseEntity.ok("审核成功");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("审核失败：" + e.getMessage());
         }
     }
 }

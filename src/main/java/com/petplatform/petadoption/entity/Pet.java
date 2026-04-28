@@ -21,9 +21,14 @@ public class Pet {
     private String photoUrl;//图片地址
     private String tags;//宠物标签
 
-    private boolean isVaccinated = false;
-    private boolean isNeutered = false;
-    private boolean isDewormed = false;
+    @Column(name = "vaccinated")
+    private boolean vaccinated = false;
+
+    @Column(name = "neutered")
+    private boolean neutered = false;
+
+    @Column(name = "dewormed")
+    private boolean dewormed = false;
 
 
     @Column(length = 1000)
@@ -32,9 +37,13 @@ public class Pet {
     @Enumerated(EnumType.STRING)
     private PetStatus status = PetStatus.AVAILABLE;//默认状态
 
+    // 审核状态
+    @Enumerated(EnumType.STRING)
+    private PostStatus reviewStatus = PostStatus.PENDING;//默认待审核
+
     @ManyToOne
     @JoinColumn(name = "rescuer_id")
-    private User rescuer;//救援者
+    private User rescuer;//宠物发布者
 
     private LocalDateTime createTime = LocalDateTime.now();
 }

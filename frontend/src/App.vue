@@ -49,6 +49,12 @@
         <el-menu-item v-if="userRole === 'ADMIN'" index="5">
           <span class="menu-icon">📋</span> 申请审核
         </el-menu-item>
+        <el-menu-item v-if="userRole === 'ADMIN'" index="6">
+          <span class="menu-icon">🐾</span> 宠物审核
+        </el-menu-item>
+        <el-menu-item v-if="userRole === 'ADMIN'" index="7">
+          <span class="menu-icon">📝</span> 帖子审核
+        </el-menu-item>
       </el-menu>
     </el-aside>
 
@@ -96,6 +102,8 @@ import PetList from './components/PetList.vue'
 import PublishPet from './components/PublishPet.vue'
 import HelpPost from './components/HelpPost.vue'
 import AdminApplyManagement from './components/AdminApplyManagement.vue'
+import AdminPetReview from './components/AdminPetReview.vue'
+import AdminPostReview from './components/AdminPostReview.vue'
 import MyCenter from './components/MyCenter.vue'
 import Login from './components/Login.vue'
 
@@ -130,6 +138,24 @@ const handleMenuSelect = (index) => {
   else if (index === '5') {
     if (userRole.value === 'ADMIN') {
       currentComponent.value = AdminApplyManagement
+    } else {
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.warning('无权限访问')
+      })
+    }
+  }
+  else if (index === '6') {
+    if (userRole.value === 'ADMIN') {
+      currentComponent.value = AdminPetReview
+    } else {
+      import('element-plus').then(({ ElMessage }) => {
+        ElMessage.warning('无权限访问')
+      })
+    }
+  }
+  else if (index === '7') {
+    if (userRole.value === 'ADMIN') {
+      currentComponent.value = AdminPostReview
     } else {
       import('element-plus').then(({ ElMessage }) => {
         ElMessage.warning('无权限访问')
@@ -242,4 +268,3 @@ const showLoginDialog = () => {
   font-weight: 500;
 }
 </style>
-

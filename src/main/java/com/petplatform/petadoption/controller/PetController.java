@@ -40,9 +40,24 @@ public class PetController {
         try {
             // 校验救助者身份
             String username = (String) request.get("username");
+            if (username == null || username.isEmpty()) {
+                return ResponseEntity.badRequest().body("用户名不能为空");
+            }
+
             User rescuer = userService.findByUsername(username);
             if (rescuer == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 校验必填字段
+            if (request.get("name") == null || ((String) request.get("name")).isEmpty()) {
+                return ResponseEntity.badRequest().body("宠物名称不能为空");
+            }
+            if (request.get("type") == null || ((String) request.get("type")).isEmpty()) {
+                return ResponseEntity.badRequest().body("宠物种类不能为空");
+            }
+            if (request.get("description") == null || ((String) request.get("description")).isEmpty()) {
+                return ResponseEntity.badRequest().body("宠物描述不能为空");
             }
 
             // 构建宠物实体对象
@@ -50,7 +65,15 @@ public class PetController {
             pet.setName((String) request.get("name"));
             pet.setType((String) request.get("type"));
             pet.setGender((String) request.get("gender"));
-            pet.setAge(Integer.valueOf(request.get("age").toString()));
+
+            // 处理年龄字段（支持字符串和数字类型）
+            Object ageObj = request.get("age");
+            if (ageObj != null) {
+                pet.setAge(Integer.valueOf(ageObj.toString()));
+            } else {
+                pet.setAge(1); // 默认年龄
+            }
+
             pet.setDescription((String) request.get("description"));
 
             // 处理宠物图片信息
@@ -67,17 +90,39 @@ public class PetController {
                 pet.setTags((String) request.get("tags"));
             }
 
+            // 处理健康状态（支持Boolean和String类型）
+            Object vaccinatedObj = request.get("isVaccinated");
+            if (vaccinatedObj != null) {
+                pet.setVaccinated(Boolean.valueOf(vaccinatedObj.toString()));
+            }
+
+            Object neuteredObj = request.get("isNeutered");
+            if (neuteredObj != null) {
+                pet.setNeutered(Boolean.valueOf(neuteredObj.toString()));
+            }
+
+            Object dewormedObj = request.get("isDewormed");
+            if (dewormedObj != null) {
+                pet.setDewormed(Boolean.valueOf(dewormedObj.toString()));
+            }
+
+
             // 设置关联关系和初始状态
             pet.setRescuer(rescuer);
             pet.setStatus(PetStatus.AVAILABLE);
+            pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
 
             petService.save(pet);
 
-            return ResponseEntity.ok("发布成功");
+            return ResponseEntity.ok("发布成功，请等待管理员审核");
         } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("发布宠物失败，请求数据：" + request);
             return ResponseEntity.badRequest().body("发布失败：" + e.getMessage());
         }
     }
+
+
 
     /**
      * 根据 ID 查询宠物详情
@@ -219,5 +264,93 @@ public class PetController {
     }
 
 
+    /**
+     * 获取待审核的宠物列表（仅限管理员，分页）
+     */
+    @GetMapping("/pending")
+    public ResponseEntity<?> getPendingPets(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createTime"));
+            Page<Pet> pets = petService.findPendingPage(pageable);
+            return ResponseEntity.ok(pets);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取已拒绝的宠物列表（仅限管理员，分页）
+     */
+    @GetMapping("/rejected")
+    public ResponseEntity<?> getRejectedPets(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+            Page<Pet> pets = petService.findRejectedPage(pageable);
+            return ResponseEntity.ok(pets);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 审核宠物
+     */
+    @PostMapping("/review/{petId}")
+    public ResponseEntity<?> reviewPet(
+            @PathVariable Long petId,
+            @RequestParam String username,
+            @RequestParam String action) {
+        try {
+            User admin = userService.findByUsername(username);
+            if (admin == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (admin.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限操作");
+            }
+
+            Pet pet = petService.findById(petId);
+            if (pet == null) {
+                return ResponseEntity.badRequest().body("宠物不存在");
+            }
+
+            if (pet.getReviewStatus() != com.petplatform.petadoption.entity.PostStatus.PENDING) {
+                return ResponseEntity.badRequest().body("该宠物已审核，不能重复操作");
+            }
+
+            if ("approve".equals(action)) {
+                pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.APPROVED);
+            } else if ("reject".equals(action)) {
+                pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.REJECTED);
+            } else {
+                return ResponseEntity.badRequest().body("无效的操作");
+            }
+
+            petService.save(pet);
+            return ResponseEntity.ok("审核成功");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("审核失败：" + e.getMessage());
+        }
+    }
 
 }

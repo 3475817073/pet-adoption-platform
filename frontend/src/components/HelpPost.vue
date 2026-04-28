@@ -456,7 +456,7 @@ const submitPost = async () => {
       category: postForm.value.category
     })
 
-    ElMessage.success('帖子发布成功！')
+    ElMessage.success('帖子发布成功！请等待管理员审核')
     publishVisible.value = false
     postForm.value = { category: '', title: '', content: '' }
     await loadPostsFromServer()

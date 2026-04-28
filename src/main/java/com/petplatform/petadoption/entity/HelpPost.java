@@ -21,5 +21,9 @@ public class HelpPost {
     private String content;//内容
     private String category;   //分类：物资共享 / 医疗咨询 / 经验分享
 
+    //审核状态
+    @Enumerated(EnumType.STRING)
+    private PostStatus status = PostStatus.PENDING;
+
     private LocalDateTime createTime = LocalDateTime.now();//创建时间
 }

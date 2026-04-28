@@ -256,10 +256,20 @@ const publishPet = async () => {
 
   try {
     await post('/api/pet/publish', data)
-    ElMessage.success('宠物发布成功！')
+    ElMessage.success('宠物发布成功！请等待管理员审核')
 
     // 重置表单
-    form.value = { name: '', type: '', gender: '公', age: 1, description: '', tags: [] }
+    form.value = {
+      name: '',
+      type: '',
+      gender: '公',
+      age: 1,
+      description: '',
+      isVaccinated: false,
+      isNeutered: false,
+      isDewormed: false,
+      tags: []
+    }
     uploadedUrls.value = []
     imageList.value = []
 

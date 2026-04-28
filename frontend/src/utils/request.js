@@ -80,8 +80,8 @@ export function get(url, params) {
 /**
  * POST 请求快捷方法
  */
-export function post(url, body) {
-    return request(url, { method: 'POST', body })
+export function post(url, body, params) {
+    return request(url, { method: 'POST', body, params })
 }
 
 /**
