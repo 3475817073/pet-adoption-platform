@@ -1,74 +1,53 @@
 <template>
-  <el-container style="height: 100vh">
-    <!-- 左侧菜单 -->
-    <el-aside width="220px" style="position: relative; overflow: hidden">
-      <svg class="sidebar-bg" viewBox="0 0 220 800" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="sidebar-paw" x="0" y="0" width="80" height="80" patternUnits="userSpaceOnUse">
-            <text x="10" y="40" font-size="24" opacity="0.08">🐾</text>
-          </pattern>
-        </defs>
-
-        <rect width="220" height="800" fill="#3D405B"/>
-        <rect width="220" height="800" fill="url(#sidebar-paw)"/>
-
-        <circle cx="110" cy="80" r="150" fill="#E07A5F" opacity="0.12"/>
-        <circle cx="50" cy="300" r="100" fill="#81B29A" opacity="0.08"/>
-        <circle cx="180" cy="500" r="120" fill="#F2CC8F" opacity="0.1"/>
-        <circle cx="100" cy="700" r="130" fill="#81B29A" opacity="0.06"/>
-
-        <ellipse cx="60" cy="200" rx="80" ry="50" fill="#E07A5F" opacity="0.08" transform="rotate(-20 60 200)"/>
-        <ellipse cx="160" cy="600" rx="70" ry="40" fill="#F2CC8F" opacity="0.08" transform="rotate(15 160 600)"/>
-      </svg>
-
-      <div style="position: relative; z-index: 1; padding: 35px 20px; text-align: center">
-        <div style="font-size: 52px; margin-bottom: 12px; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3))">🐱</div>
-        <div style="font-size: 17px; font-weight: 600; color: #FDF8F3; line-height: 1.6; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2)">
-          宠物领养平台<br/>
-          <span style="font-size: 11px; opacity: 0.9; font-weight: 400"></span>
+  <div class="app-container">
+    <!-- 顶部导航栏 -->
+    <header class="top-navbar">
+      <div class="navbar-content">
+        <!-- Logo -->
+        <div class="navbar-logo" @click="router.push('/pets')">
+          <span class="logo-icon">🐱</span>
+          <span class="logo-text">宠物领养平台</span>
         </div>
-      </div>
 
-      <el-menu :default-active="activeIndex" @select="handleMenuSelect"
-               style="border-right: none; background: transparent; position: relative; z-index: 1"
-               text-color="#E8EAED"
-               active-text-color="#FDF8F3"
-               class="sidebar-menu">
-        <el-menu-item index="1">
-          <span class="menu-icon">🐶</span> 宠物列表
-        </el-menu-item>
-        <el-menu-item index="2">
-          <span class="menu-icon">📤</span> 发布宠物
-        </el-menu-item>
-        <el-menu-item index="3">
-          <span class="menu-icon">💬</span> 互助交流
-        </el-menu-item>
-        <el-menu-item index="4">
-          <span class="menu-icon">👤</span> 个人中心
-        </el-menu-item>
-        <el-menu-item v-if="userRole === 'ADMIN'" index="5">
-          <span class="menu-icon">📋</span> 申请审核
-        </el-menu-item>
-        <el-menu-item v-if="userRole === 'ADMIN'" index="6">
-          <span class="menu-icon">🐾</span> 宠物审核
-        </el-menu-item>
-        <el-menu-item v-if="userRole === 'ADMIN'" index="7">
-          <span class="menu-icon">📝</span> 帖子审核
-        </el-menu-item>
-      </el-menu>
-    </el-aside>
+        <!-- 导航菜单 -->
+        <nav class="navbar-menu">
+          <router-link to="/pets" class="nav-item" :class="{ active: route.path === '/pets' }">
+            <span class="nav-icon">🐶</span>
+            <span>宠物列表</span>
+          </router-link>
+          <router-link to="/publish" class="nav-item" :class="{ active: route.path === '/publish' }">
+            <span class="nav-icon"></span>
+            <span>宠物发布</span>
+          </router-link>
+          <router-link to="/help" class="nav-item" :class="{ active: route.path === '/help' }">
+            <span class="nav-icon">💬</span>
+            <span>社区互助</span>
+          </router-link>
+          <router-link to="/center" class="nav-item" :class="{ active: route.path === '/center' }">
+            <span class="nav-icon">👤</span>
+            <span>个人中心</span>
+          </router-link>
 
-    <el-container>
-      <el-header height="65px" style="background: #FDF8F3; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; justify-content: space-between; padding: 0 35px">
-        <div>
-          <span style="font-size: 20px; font-weight: 600; color: #3D405B; letter-spacing: 0.3px">
-            宠物领养与互助服务平台
-          </span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 12px">
+          <!-- 管理员菜单 -->
+          <template v-if="userRole === 'ADMIN'">
+            <router-link to="/admin/applications" class="nav-item" :class="{ active: route.path === '/admin/applications' }">
+              <span class="nav-icon">📋</span>
+              <span>申请审核</span>
+            </router-link>
+            <router-link to="/admin/pets" class="nav-item" :class="{ active: route.path === '/admin/pets' }">
+              <span class="nav-icon">🐾</span>
+              <span>宠物审核</span>
+            </router-link>
+            <router-link to="/admin/posts" class="nav-item" :class="{ active: route.path === '/admin/posts' }">
+              <span class="nav-icon">📝</span>
+              <span>帖子审核</span>
+            </router-link>
+          </template>
+        </nav>
 
-          <el-button v-if="!isLoggedIn" type="primary" @click="showLoginDialog"
-                     class="login-btn">
+        <!-- 用户操作区 -->
+        <div class="navbar-actions">
+          <el-button v-if="!isLoggedIn" type="primary" @click="showLoginDialog" class="login-btn">
             登录 / 注册
           </el-button>
           <el-dropdown v-else>
@@ -80,40 +59,45 @@
             </template>
           </el-dropdown>
         </div>
-      </el-header>
+      </div>
+    </header>
 
-      <el-main style="background: #FDF8F3">
-        <component :is="currentComponent" @needLogin="showLoginDialog" />
-      </el-main>
-    </el-container>
-  </el-container>
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <router-view v-slot="{ Component }">
+        <keep-alive :include="['PetList']">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
+    </main>
+  </div>
 
   <!-- 登录弹窗 -->
   <Login
       v-model="showLogin"
       @loginSuccess="handleLoginSuccess"
-
   />
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import PetList from './components/PetList.vue'
-import PublishPet from './components/PublishPet.vue'
-import HelpPost from './components/HelpPost.vue'
-import AdminApplyManagement from './components/AdminApplyManagement.vue'
-import AdminPetReview from './components/AdminPetReview.vue'
-import AdminPostReview from './components/AdminPostReview.vue'
-import MyCenter from './components/MyCenter.vue'
+import { ArrowDown } from '@element-plus/icons-vue'
+import { ref, onMounted, provide } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Login from './components/Login.vue'
 
+const route = useRoute()
+const router = useRouter()
 
-const activeIndex = ref('1')
-const currentComponent = ref(PetList)
 const isLoggedIn = ref(false)
 const username = ref('')
 const userRole = ref('')
 const showLogin = ref(false)
+
+// 提供触发登录弹窗的方法给子组件
+const triggerLogin = () => {
+  showLogin.value = true
+}
+provide('triggerLogin', triggerLogin)
 
 onMounted(() => {
   const userStr = localStorage.getItem('user')
@@ -129,43 +113,6 @@ onMounted(() => {
   }
 })
 
-const handleMenuSelect = (index) => {
-  activeIndex.value = index
-  if (index === '1') currentComponent.value = PetList
-  else if (index === '2') currentComponent.value = PublishPet
-  else if (index === '3') currentComponent.value = HelpPost
-  else if (index === '4') currentComponent.value = MyCenter
-  else if (index === '5') {
-    if (userRole.value === 'ADMIN') {
-      currentComponent.value = AdminApplyManagement
-    } else {
-      import('element-plus').then(({ ElMessage }) => {
-        ElMessage.warning('无权限访问')
-      })
-    }
-  }
-  else if (index === '6') {
-    if (userRole.value === 'ADMIN') {
-      currentComponent.value = AdminPetReview
-    } else {
-      import('element-plus').then(({ ElMessage }) => {
-        ElMessage.warning('无权限访问')
-      })
-    }
-  }
-  else if (index === '7') {
-    if (userRole.value === 'ADMIN') {
-      currentComponent.value = AdminPostReview
-    } else {
-      import('element-plus').then(({ ElMessage }) => {
-        ElMessage.warning('无权限访问')
-      })
-    }
-  }
-}
-
-
-
 const handleLoginSuccess = (user) => {
   isLoggedIn.value = true
   username.value = user.username || user.realName
@@ -178,8 +125,7 @@ const logout = () => {
   username.value = ''
   userRole.value = ''
   localStorage.removeItem('user')
-  currentComponent.value = PetList
-  activeIndex.value = '1'
+  router.push('/pets')
 }
 
 const showLoginDialog = () => {
@@ -189,82 +135,224 @@ const showLoginDialog = () => {
 
 
 <style>
-.sidebar-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
+/* ===== 全局重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
   height: 100%;
-  z-index: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  overflow-x: hidden;
 }
 
-.menu-icon {
-  margin-right: 8px;
-  font-size: 16px;
+#app {
+  height: 100%;
+  width: 100%;
 }
 
-.sidebar-menu .el-menu-item {
-  border-radius: 10px;
-  margin: 6px 10px;
+.app-container {
+  min-height: 100vh;
+  background: #f9fafb;
+  width: 100%;
+}
+
+/* ===== 顶部导航栏 ===== */
+.top-navbar {
+  background: #ffffff;
+  border-bottom: 2px solid #e5e7eb;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+.navbar-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 30px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+/* Logo */
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.02);
+}
+
+.logo-icon {
+  font-size: 36px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* 导航菜单 */
+.navbar-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 15px;
+  transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
+  white-space: nowrap;
 }
 
-.sidebar-menu .el-menu-item::before {
+.nav-item:hover {
+  background: #f3f4f6;
+  color: #cc785c;
+  transform: translateY(-2px);
+}
+
+.nav-item.active {
+  background: rgba(204, 120, 92, 0.1);
+  color: #cc785c;
+}
+
+.nav-item.active::after {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 3px;
-  height: 100%;
-  background: transparent;
-  transition: all 0.3s ease;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 3px;
+  background: #cc785c;
+  border-radius: 2px;
 }
 
-.sidebar-menu .el-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
+.nav-icon {
+  font-size: 18px;
 }
 
-.sidebar-menu .el-menu-item:hover::before {
-  background: #E07A5F;
+/* 用户操作区 */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  background: rgba(224, 122, 95, 0.2) !important;
-  color: #FDF8F3 !important;
-}
-
-.sidebar-menu .el-menu-item.is-active::before {
-  background: #E07A5F;
-}
-
-.role-badge {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.role-badge.admin {
-  background: #E07A5F;
-  color: white;
-}
-
-.role-badge.user {
-  background: #81B29A;
-  color: white;
-}
-
+/* 登录按钮 */
 .login-btn {
-  background: #E07A5F !important;
-  border-color: #E07A5F !important;
-  border-radius: 20px !important;
-  padding: 8px 20px !important;
+  background: #cc785c !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 10px 24px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(204, 120, 92, 0.25) !important;
 }
 
+.login-btn:hover {
+  background: #a9583e !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(204, 120, 92, 0.35) !important;
+}
+
+/* 用户下拉菜单 */
 .user-dropdown {
   cursor: pointer;
-  color: #E07A5F;
-  font-weight: 500;
+  color: #cc785c;
+  font-weight: 600;
+  padding: 8px 16px;
+  border: 2px solid #e8d5c4;
+  border-radius: 12px;
+  background: rgba(204, 120, 92, 0.05);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.user-dropdown:hover {
+  background: rgba(204, 120, 92, 0.1);
+  border-color: #cc785c;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(204, 120, 92, 0.15);
+}
+
+/* ===== 主内容区 - 全宽布局 ===== */
+.main-content {
+  width: 100%;
+  min-height: calc(100vh - 70px);
+  background: #f9fafb;
+}
+
+/* ===== 响应式设计 ===== */
+@media (max-width: 1200px) {
+  .navbar-content {
+    padding: 0 20px;
+    gap: 20px;
+  }
+
+  .nav-item {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  .nav-icon {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-content {
+    padding: 0 15px;
+    gap: 10px;
+  }
+
+  .logo-text {
+    font-size: 16px;
+  }
+
+  .navbar-menu {
+    gap: 4px;
+  }
+
+  .nav-item {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .nav-item span:not(.nav-icon) {
+    display: none;
+  }
 }
 </style>

@@ -1,6 +1,5 @@
 <template>
   <div>
-    <el-page-header title="个人中心" content="查看我的发布和申请记录" />
 
     <!-- 用户信息卡片：展示用户名、角色标签及统计数据 -->
     <el-card style="max-width: 1200px; margin: 20px auto; border-radius: 16px">
@@ -173,9 +172,11 @@
  * 个人中心页面组件
  * 展示用户基本信息、已发布宠物列表、领养申请记录，支持宠物编辑与删除操作
  */
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, inject } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { get, put, del } from '../utils/request.js'
+
+const triggerLogin = inject('triggerLogin')
 
 const user = ref(null)
 const activeTab = ref('pets')
@@ -278,6 +279,7 @@ const loadUserData = async () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) {
     ElMessage.warning('请先登录')
+    triggerLogin()
     return
   }
 
@@ -373,6 +375,7 @@ const saveEdit = async () => {
   if (!userStr) {
     ElMessage.warning('请先登录')
     saving.value = false
+    triggerLogin()
     return
   }
 
@@ -412,6 +415,7 @@ const deletePet = (petId) => {
     const userStr = localStorage.getItem('user')
     if (!userStr) {
       ElMessage.warning('请先登录')
+      triggerLogin()
       return
     }
 

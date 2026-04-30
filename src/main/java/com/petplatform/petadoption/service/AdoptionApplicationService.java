@@ -68,6 +68,20 @@ public class AdoptionApplicationService {
     }
 
     /**
+     * 分页查询已通过的领养申请
+     */
+    public Page<AdoptionApplication> findApprovedPage(Pageable pageable) {
+        return applicationRepository.findByStatus(ApplicationStatus.APPROVED, pageable);
+    }
+
+    /**
+     * 分页查询已拒绝的领养申请
+     */
+    public Page<AdoptionApplication> findRejectedPage(Pageable pageable) {
+        return applicationRepository.findByStatus(ApplicationStatus.REJECTED, pageable);
+    }
+
+    /**
      * 分页查询系统中所有的领养申请
      */
     public Page<AdoptionApplication> findAllPage(Pageable pageable) {

@@ -35,11 +35,10 @@ export async function request(url, options = {}) {
     try {
         const response = await fetch(fullUrl, fetchOptions)
 
-        // 处理 401 未授权（登录过期）
+        // 处理 401 未授权（登录过期或密码错误）
         if (response.status === 401) {
             localStorage.removeItem('user')
-            window.location.href = '/login'
-            throw new Error('请先登录')
+            throw new Error('用户名或密码错误，请重新输入')
         }
 
         // 处理 403 无权限

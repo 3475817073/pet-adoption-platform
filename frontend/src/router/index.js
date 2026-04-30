@@ -1,0 +1,96 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import PetList from '../components/PetList.vue'
+import PublishPet from '../components/PublishPet.vue'
+import PetDetail from '../components/PetDetail.vue'
+import HelpPost from '../components/HelpPost.vue'
+import MyCenter from '../components/MyCenter.vue'
+import AdminApplyManagement from '../components/AdminApplyManagement.vue'
+import AdminPetReview from '../components/AdminPetReview.vue'
+import AdminPostReview from '../components/AdminPostReview.vue'
+
+const routes = [
+    {
+        path: '/',
+        redirect: '/pets'
+    },
+    {
+        path: '/pets',
+        component: PetList,
+        meta: { title: '宠物列表', keepAlive: true }
+    },
+    {
+        path: '/pet/:id',
+        component: PetDetail,
+        meta: { title: '宠物详情' }
+    },
+    {
+        path: '/publish',
+        component: PublishPet,
+        meta: { title: '发布宠物' }
+    },
+    {
+        path: '/help',
+        component: HelpPost,
+        meta: { title: '互助交流' }
+    },
+    {
+        path: '/center',
+        component: MyCenter,
+        meta: { title: '个人中心' }
+    },
+    {
+        path: '/admin/applications',
+        component: AdminApplyManagement,
+        meta: { title: '申请审核', requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/pets',
+        component: AdminPetReview,
+        meta: { title: '宠物审核', requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/posts',
+        component: AdminPostReview,
+        meta: { title: '帖子审核', requiresAuth: true, requiresAdmin: true }
+    },
+]
+
+const router = createRouter({
+    history: createWebHistory(),
+    routes,
+    scrollBehavior(to, from, savedPosition) {
+        // 如果是从详情页返回列表页，且有保存的位置，则恢复
+        if (savedPosition) {
+            return savedPosition
+        }
+        // 其他情况滚动到顶部
+        return { top: 0 }
+    }
+})
+
+
+// 路由守卫：检查权限
+router.beforeEach((to, from, next) => {
+    const userStr = localStorage.getItem('user')
+    const user = userStr ? JSON.parse(userStr) : null
+
+    if (to.meta.requiresAuth && !user) {
+        import('element-plus').then(({ ElMessage }) => {
+            ElMessage.warning('请先登录')
+        })
+        next('/pets')
+        return
+    }
+
+    if (to.meta.requiresAdmin && user?.role !== 'ADMIN') {
+        import('element-plus').then(({ ElMessage }) => {
+            ElMessage.warning('无权限访问')
+        })
+        next('/pets')
+        return
+    }
+
+    next()
+})
+
+export default router

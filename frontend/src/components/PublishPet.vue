@@ -1,6 +1,6 @@
 <template>
   <div class="publish-container">
-    <!-- 欢迎页视图 -->
+    <!-- 欢迎页视图 - 完全保持原样 -->
     <div v-if="!showForm" class="welcome-view">
       <div class="welcome-card">
         <div class="title-section">
@@ -20,7 +20,7 @@
               type="primary"
               size="large"
               class="start-publish-btn"
-              @click="showForm = true">
+              @click="handleStartPublish">
             <span class="btn-icon">📝</span>
             开始发布宠物信息
           </el-button>
@@ -51,7 +51,7 @@
             <li>
               <span class="tip-icon">✓</span>
               <div>
-                <strong>性格描述</strong>
+                <strong>宠物介绍</strong>
                 <p>告诉领养者它的特点</p>
               </div>
             </li>
@@ -60,7 +60,7 @@
       </div>
     </div>
 
-    <!-- 表单页视图 -->
+    <!-- 表单页视图 - 柔和现代风格 -->
     <div v-else class="form-view">
       <div class="form-header">
         <el-button
@@ -69,46 +69,54 @@
             circle>
           ←
         </el-button>
-        <h2>🐾 发布宠物信息</h2>
+        <h2> 发布宠物信息</h2>
       </div>
 
       <div class="form-card">
-        <el-form :model="form" label-width="120px" class="custom-form">
-          <div class="form-row">
-            <el-form-item label="名字">
+        <el-form :model="form" label-width="100px" class="custom-form">
+          <div class="form-row form-row-short">
+            <el-form-item label="名字" required>
               <el-input v-model="form.name" placeholder="给它取个好听的名字吧" class="styled-input" />
             </el-form-item>
           </div>
 
-          <div class="form-row">
-            <el-form-item label="种类">
+          <div class="form-row form-row-short">
+            <el-form-item label="种类" required>
               <el-input v-model="form.type" placeholder="猫 / 狗 / 其他" class="styled-input" />
             </el-form-item>
           </div>
 
-          <div class="form-row">
-            <el-form-item label="性别">
-              <el-select v-model="form.gender" placeholder="请选择性别" class="styled-input">
-                <el-option label="♂ 公" value="公" />
-                <el-option label="♀ 母" value="母" />
-              </el-select>
+          <div class="form-row form-row-short">
+            <el-form-item label="性别" required>
+              <el-radio-group v-model="form.gender" class="gender-radio">
+                <el-radio label="公">公</el-radio>
+                <el-radio label="母">母</el-radio>
+              </el-radio-group>
+            </el-form-item>
+          </div>
+
+          <div class="form-row form-row-short">
+            <el-form-item label="年龄" required>
+              <div class="age-stepper">
+                <button type="button" class="stepper-btn minus" @click="decreaseAge">−</button>
+                <input
+                    class="stepper-display"
+                    type="number"
+                    v-model.number="form.age"
+                >
+                <button type="button" class="stepper-btn plus" @click="increaseAge">+</button>
+                <span class="unit-text">岁</span>
+              </div>
             </el-form-item>
           </div>
 
           <div class="form-row">
-            <el-form-item label="年龄">
-              <el-input-number v-model="form.age" :min="0" :max="30" class="styled-input-number" />
-              <span class="unit-text">岁</span>
-            </el-form-item>
-          </div>
-
-          <div class="form-row">
-            <el-form-item label="性格描述">
+            <el-form-item label="宠物介绍" required>
               <el-input
                   type="textarea"
                   v-model="form.description"
                   rows="4"
-                  placeholder="描述它的性格、健康状况、是否已绝育、是否需要特殊照顾..."
+                  placeholder="描述它的性格、健康状况、是否需要特殊照顾..."
                   class="styled-textarea" />
             </el-form-item>
           </div>
@@ -189,6 +197,12 @@
       </div>
     </div>
   </div>
+
+  <!-- 登录弹窗 -->
+  <Login
+      v-model="showLoginDialog"
+      @loginSuccess="handleLoginSuccess"
+  />
 </template>
 
 <script setup>
@@ -199,6 +213,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
+import Login from './Login.vue'
 
 const emit = defineEmits(['needLogin'])
 
@@ -218,6 +233,42 @@ const loading = ref(false)
 const imageList = ref([])
 const uploadedUrls = ref([])
 const showForm = ref(false)
+const showLoginDialog = ref(false)
+
+/**
+ * 处理"开始发布"按钮点击，校验登录状态
+ */
+const handleStartPublish = () => {
+  if (!localStorage.getItem('user')) {
+    ElMessage.warning('请先登录才能发布宠物')
+    showLoginDialog.value = true
+    return
+  }
+  showForm.value = true
+}
+
+/**
+ * 登录成功回调
+ */
+const handleLoginSuccess = () => {
+  showForm.value = true
+}
+
+/**
+ * 增加年龄
+ */
+const increaseAge = () => {
+  form.value.age++
+}
+
+/**
+ * 减少年龄
+ */
+const decreaseAge = () => {
+  if (form.value.age > 0) {
+    form.value.age--
+  }
+}
 
 /**
  * 上传前校验：检查文件类型是否为图片且大小不超过 5MB
@@ -256,15 +307,9 @@ const handleUploadError = () => {
 
 /**
  * 提交发布宠物信息
- * 校验必填项与登录状态后，将表单数据与图片 URL 发送至后端
+ * 校验必填项后，将表单数据与图片 URL 发送至后端
  */
 const publishPet = async () => {
-  if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能发布宠物')
-    emit('needLogin')
-    return
-  }
-
   if (!form.value.name || !form.value.type || !form.value.description) {
     ElMessage.warning('请填写完整信息')
     return
@@ -279,7 +324,6 @@ const publishPet = async () => {
     description: form.value.description,
     username: user.username,
     tags: JSON.stringify(form.value.tags),
-    // 新增：传递健康状态
     isVaccinated: form.value.isVaccinated,
     isNeutered: form.value.isNeutered,
     isDewormed: form.value.isDewormed
@@ -294,7 +338,6 @@ const publishPet = async () => {
     await post('/api/pet/publish', data)
     ElMessage.success('宠物发布成功！请等待管理员审核')
 
-    // 重置表单
     form.value = {
       name: '',
       type: '',
@@ -309,7 +352,6 @@ const publishPet = async () => {
     uploadedUrls.value = []
     imageList.value = []
 
-    // 发布成功后返回欢迎页
     showForm.value = false
 
   } catch (error) {
@@ -326,7 +368,7 @@ const publishPet = async () => {
   min-height: calc(100vh - 100px);
 }
 
-/* ===== 欢迎页样式 ===== */
+/* ===== 欢迎页样式 - 保持原样 ===== */
 .welcome-view {
   display: flex;
   flex-direction: column;
@@ -470,7 +512,7 @@ const publishPet = async () => {
   border-radius: 2px;
 }
 
-/* 小贴士悬浮卡片 */
+/* 小贴士悬浮卡片 - 保持原样 */
 .tips-floating {
   position: fixed;
   right: 60px;
@@ -563,9 +605,9 @@ const publishPet = async () => {
   line-height: 1.5;
 }
 
-/* ===== 表单页样式 ===== */
+/* ===== 表单页样式 - 柔和现代风格 ===== */
 .form-view {
-  max-width: 900px;
+  max-width: 950px;
   margin: 0 auto;
   animation: fadeIn 0.4s ease-out;
 }
@@ -591,30 +633,39 @@ const publishPet = async () => {
   height: 48px;
   font-size: 20px;
   border-radius: 50% !important;
-  background: #f3f4f6 !important;
-  border: none !important;
-  transition: all 0.3s ease !important;
+  background: #ffffff !important;
+  border: 2px solid #e8d5c4 !important;
+  color: #cc785c !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.15) !important;
+  transition: all 0.2s ease !important;
 }
 
 .back-btn:hover {
-  background: #e5e7eb !important;
-  transform: scale(1.1) !important;
+  background: #fffaf5 !important;
+  border-color: #cc785c !important;
+  transform: translateX(-3px);
+  box-shadow: 0 4px 12px rgba(204, 120, 92, 0.25) !important;
+}
+
+.back-btn:active {
+  transform: translateX(0);
 }
 
 .form-header h2 {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  color: #1f2937;
+  color: #2d3748;
   margin: 0;
-  letter-spacing: 1px;
 }
 
+/* 表单卡片 - 柔和现代风格 */
 .form-card {
-  background: white;
-  border-radius: 24px;
+  background: #ffffff;
+  border: 1px solid #f0e6d6;
+  border-radius: 20px;
   padding: 50px;
-  box-shadow: 0 12px 40px rgba(61, 64, 91, 0.1);
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
 }
 
 .custom-form {
@@ -622,62 +673,144 @@ const publishPet = async () => {
 }
 
 .form-row {
-  margin-bottom: 20px;
+  margin-bottom: 28px;
 }
 
+/* 限制短输入框的宽度 */
+.form-row-short {
+  max-width: 520px;
+}
+
+/* 性别单选框 */
+.gender-radio {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+/* 输入框 - 柔和现代风格 */
 .styled-input :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  padding: 12px 18px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-  border: 2px solid #e5e7eb;
-  transition: all 0.3s ease;
+  border: 2px solid #e8d5c4 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  background: #fffaf5 !important;
+  padding: 12px 16px !important;
+  transition: all 0.2s ease !important;
 }
 
 .styled-input :deep(.el-input__wrapper:hover) {
-  border-color: #f2cc8f;
+  border-color: #d4a574 !important;
+  background: #fff3e6 !important;
 }
 
 .styled-input :deep(.el-input__wrapper.is-focus) {
-  border-color: #cc785c;
-  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.1);
+  border-color: #cc785c !important;
+  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.1) !important;
+  background: #ffffff !important;
 }
 
-.styled-input-number :deep(.el-input-number) {
-  width: 200px;
+/* 年龄步进器 - 保留动画 */
+.age-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.styled-input-number :deep(.el-input-number .el-input__wrapper) {
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
+.stepper-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50% !important;
+  border: 2px solid #e8d5c4 !important;
+  background: #fffaf5 !important;
+  color: #cc785c !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.15) !important;
+  transition: all 0.15s ease !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0 !important;
+}
+
+.stepper-btn:hover {
+  background: #fff3e6 !important;
+  border-color: #cc785c !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(204, 120, 92, 0.25) !important;
+}
+
+.stepper-btn:active {
+  transform: scale(0.9) !important;
+  box-shadow: 0 1px 4px rgba(204, 120, 92, 0.15) !important;
+}
+
+.stepper-display {
+  width: 70px;
+  height: 44px;
+  border: 2px solid #e8d5c4 !important;
+  border-radius: 12px !important;
+  background: #fffaf5 !important;
+  text-align: center !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  color: #2d3748 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  outline: none;
+  -moz-appearance: textfield;
+  -webkit-appearance: none;
+}
+
+.stepper-display:focus {
+  border-color: #cc785c !important;
+  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.1) !important;
+  background: #ffffff !important;
+}
+
+.stepper-display::-webkit-outer-spin-button,
+.stepper-display::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .unit-text {
-  margin-left: 12px;
-  color: #6b7280;
+  margin-left: 8px;
+  color: #718096;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
+/* 文本域 - 柔和风格 */
 .styled-textarea :deep(.el-textarea__inner) {
-  border-radius: 12px;
-  border: 2px solid #e5e7eb;
-  padding: 14px 18px;
-  transition: all 0.3s ease;
+  border: 2px solid #e8d5c4 !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  background: #fffaf5 !important;
+  padding: 14px 18px !important;
+  transition: all 0.2s ease !important;
   font-size: 14px;
 }
 
-.styled-textarea :deep(.el-textarea__inner:focus) {
-  border-color: #cc785c;
-  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.1);
+.styled-textarea :deep(.el-textarea__inner:hover) {
+  border-color: #d4a574 !important;
+  background: #fff3e6 !important;
 }
 
+.styled-textarea :deep(.el-textarea__inner:focus) {
+  border-color: #cc785c !important;
+  box-shadow: 0 0 0 4px rgba(204, 120, 92, 0.1) !important;
+  background: #ffffff !important;
+}
+
+/* 健康状态复选框 - 保留不规则圆角 */
 .health-checkboxes {
   display: flex;
   gap: 24px;
   flex-wrap: wrap;
 }
 
-/* 自定义复选框容器 */
 .custom-checkbox {
   display: inline-flex;
   align-items: center;
@@ -699,24 +832,24 @@ const publishPet = async () => {
   position: relative;
   height: 1.6em;
   width: 1.6em;
-  background-color: #fdfcf0;
-  border: 3px solid #1a1a1a;
-  border-radius: 8% 92% 12% 88% / 87% 11% 89% 13%;
-  box-shadow: 4px 4px 0px #1a1a1a;
-  transition:
-      transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-      box-shadow 0.2s;
+  background-color: #fffaf5;
+  border: 3px solid #e8d5c4;
+  border-radius: 20% 80% 10% 90% / 90% 10% 80% 20%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   flex-shrink: 0;
 }
 
 .custom-checkbox:hover .checkmark {
   transform: scale(1.05) rotate(2deg);
+  border-color: #cc785c;
 }
 
 .custom-checkbox input:checked ~ .checkmark {
   background-color: #cc785c;
-  border-radius: 92% 8% 88% 12% / 11% 87% 13% 89%;
-  transform: scale(1.05) rotate(-2deg);
+  border-color: #cc785c;
+  border-radius: 80% 20% 90% 10% / 10% 90% 20% 80%;
+  transform: scale(1.1) rotate(-2deg);
 }
 
 .custom-checkbox .checkmark:after {
@@ -728,7 +861,7 @@ const publishPet = async () => {
   width: 0.32em;
   transform: translate(-50%, -50%) rotate(40deg);
   height: 0.65em;
-  border: solid #1a1a1a;
+  border: solid #ffffff;
   border-width: 0 0.22em 0.22em 0;
   border-radius: 2px;
 }
@@ -740,7 +873,7 @@ const publishPet = async () => {
 
 .custom-checkbox:active .checkmark {
   transform: scale(0.9) translateY(3px);
-  box-shadow: 0px 0px 0px #1a1a1a;
+  box-shadow: 0px 0px 0px;
 }
 
 @keyframes splash {
@@ -759,26 +892,85 @@ const publishPet = async () => {
 
 .checkbox-label {
   font-size: 15px;
-  color: #374151;
-  font-weight: 500;
+  color: #2d3748;
+  font-weight: 700;
 }
 
+/* ===== 性别单选框样式 - 保留粗野主义 ===== */
+.gender-radio :deep(.el-radio) {
+  margin-right: 0 !important;
+}
+
+.gender-radio :deep(.el-radio__input) {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.gender-radio :deep(.el-radio__inner) {
+  width: 24px !important;
+  height: 24px !important;
+  border: 3px solid #e8d5c4 !important;
+  border-radius: 20% 80% 10% 90% / 90% 10% 80% 20% !important;
+  background: #fffaf5 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.gender-radio :deep(.el-radio__inner::after) {
+  width: 10px !important;
+  height: 10px !important;
+  background: #cc785c !important;
+  border-radius: 50% !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(0) !important;
+  transition: all 0.2s !important;
+}
+
+.gender-radio :deep(.el-radio__input.is-checked .el-radio__inner) {
+  background: #cc785c !important;
+  border-color: #cc785c !important;
+  border-radius: 80% 20% 90% 10% / 10% 90% 20% 80% !important;
+  transform: scale(1.1) rotate(-2deg) !important;
+  box-shadow: 0 2px 8px rgba(204, 120, 92, 0.3) !important;
+}
+
+.gender-radio :deep(.el-radio__input.is-checked .el-radio__inner::after) {
+  transform: translate(-50%, -50%) scale(1) !important;
+  background: #ffffff !important;
+}
+
+.gender-radio :deep(.el-radio__label) {
+  font-weight: 700 !important;
+  color: #2d3748 !important;
+  font-size: 15px !important;
+}
+
+/* ===== 表单左侧标签文字加粗 ===== */
+.custom-form :deep(.el-form-item__label) {
+  font-weight: 700 !important;
+  color: #2d3748 !important;
+  font-size: 15px !important;
+}
+
+/* 上传区域 - 柔和风格 */
 .photo-upload-section {
   margin-top: 30px;
 }
 
 .upload-area {
-  background: #f9fafb;
-  border: 2px dashed #d1d5db;
+  background: #fffaf5;
+  border: 2px dashed #e8d5c4;
   border-radius: 16px;
   padding: 20px;
   text-align: center;
-  transition: all 0.3s ease;
+  box-shadow: none;
+  transition: all 0.2s ease;
 }
 
 .upload-area:hover {
   border-color: #cc785c;
-  background: #fff9f6;
+  background: #fff3e6;
 }
 
 .custom-upload {
@@ -797,30 +989,37 @@ const publishPet = async () => {
 
 .upload-placeholder p {
   margin: 5px 0;
-  color: #6b7280;
+  color: #2d3748;
+  font-weight: 600;
 }
 
 .upload-hint {
   font-size: 12px;
-  color: #9ca3af;
+  color: #a0aec0;
 }
 
+/* 提交区域 - 保留粗野主义按钮 */
 .submit-section {
   margin-top: 40px;
   padding-top: 30px;
-  border-top: 2px solid #f3f4f6;
+  border-top: 2px solid #f0e6d6;
+  display: flex;
+  justify-content: center;
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
-  border: none;
-  border-radius: 16px;
-  padding: 12px 32px;
-  font-weight: 600;
+  background: #cc785c !important;
+  border: 3px solid #1f2937 !important;
+  border-radius: 12px !important;
+  padding: 18px 64px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  font-size: 20px !important;
+  box-shadow: 5px 5px 0px #1f2937 !important;
+  transition: all 0.2s ease !important;
   position: relative;
   overflow: hidden;
   z-index: 1;
-  transition: all 0.3s ease;
 }
 
 .submit-btn::before {
@@ -839,9 +1038,14 @@ const publishPet = async () => {
 }
 
 .submit-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(224, 122, 95, 0.3);
+  background: #b3654c !important;
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 7px 7px 0px #1f2937 !important;
+}
+
+.submit-btn:active {
+  transform: translate(0, 0) !important;
+  box-shadow: 3px 3px 0px #1f2937 !important;
 }
 
 /* 响应式设计 */

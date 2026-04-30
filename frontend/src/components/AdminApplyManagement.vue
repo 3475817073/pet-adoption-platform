@@ -1,8 +1,5 @@
 <template>
   <div>
-    <!-- 领养申请管理主页面 -->
-    <el-page-header title="领养申请管理" content="审核领养者的申请" />
-
     <el-tabs v-model="activeTab">
       <!-- 待审核申请列表 -->
       <el-tab-pane label="待审核" name="pending">
@@ -27,7 +24,6 @@
           <el-table-column label="养宠经验" width="120">
             <template #default="{ row }">{{ row.petExperience || '-' }}</template>
           </el-table-column>
-
           <el-table-column prop="reason" label="领养理由" />
           <el-table-column prop="contact" label="联系方式" width="150" />
           <el-table-column prop="applyTime" label="申请时间" width="180">
@@ -43,8 +39,7 @@
           </el-table-column>
         </el-table>
 
-        <!-- 待审核列表分页组件 -->
-        <div style="margin-top: 20px; display: flex; justify-content: center;">
+        <div class="pagination-wrapper">
           <el-pagination
               :pager-count="7"
               v-model:current-page="pendingPage"
@@ -55,30 +50,14 @@
               @size-change="handlePendingSizeChange"
               @current-change="handlePendingPageChange"
               background
-          >
-
-            <template #total="{ total }">
-              <span>总计 {{ total }} 条</span>
-            </template>
-            <template #jumper>
-              <span style="margin-left: 8px;">跳转至</span>
-              <el-input
-                  type="number"
-                  :min="1"
-                  :max="Math.ceil(pendingTotal / pendingPageSize)"
-                  v-model.number="jumpPendingPage"
-                  @keyup.enter="handleJumpPendingPage"
-                  style="width: 50px; margin-left: 8px;"
-              />
-            </template>
-          </el-pagination>
+              class="custom-pagination"
+          />
         </div>
-
       </el-tab-pane>
 
-      <!-- 所有申请列表 -->
-      <el-tab-pane label="所有申请" name="all">
-        <el-table :data="allList" style="width: 100%" v-loading="allLoading">
+      <!-- 已通过申请列表 -->
+      <el-tab-pane label="已通过" name="approved">
+        <el-table :data="approvedList" style="width: 100%" v-loading="approvedLoading">
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="宠物" width="150">
             <template #default="{ row }">
@@ -90,12 +69,8 @@
               {{ row.adopter.username }}
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="120">
-            <template #default="{ row }">
-              <el-tag :type="row.status === 'APPROVED' ? 'success' : row.status === 'REJECTED' ? 'danger' : 'warning'">
-                {{ statusText(row.status) }}
-              </el-tag>
-            </template>
+          <el-table-column label="联系方式" width="150">
+            <template #default="{ row }">{{ row.contact || '-' }}</template>
           </el-table-column>
           <el-table-column prop="applyTime" label="申请时间" width="180">
             <template #default="{ row }">
@@ -109,15 +84,14 @@
           </el-table-column>
           <el-table-column label="回访" width="240">
             <template #default="{ row }">
-              <!-- 仅已通过申请提供回访功能 -->
-              <div v-if="row.status === 'APPROVED'" style="display: flex; gap: 8px">
+              <div style="display: flex; gap: 8px">
                 <el-button
                     type="primary"
                     size="small"
                     @click="showVisitDialog(row)"
                     style="background: #E07A5F; border-color: #E07A5F"
                 >
-                  📝 添加回访
+                  添加回访
                 </el-button>
                 <el-button
                     type="info"
@@ -128,28 +102,67 @@
                   📋 回访历史
                 </el-button>
               </div>
-              <span v-else style="color: #999">-</span>
             </template>
           </el-table-column>
-
         </el-table>
 
-        <!-- 所有申请列表分页组件 -->
         <div class="pagination-wrapper">
           <el-pagination
-              v-model:current-page="allPage"
-              v-model:page-size="allPageSize"
+              v-model:current-page="approvedPage"
+              v-model:page-size="approvedPageSize"
               :page-sizes="[5, 10, 20, 50]"
-              :total="allTotal"
-              layout="total, prev, pager, next, sizes, jumper"
-              :pager-count="7"
-              @size-change="handleAllSizeChange"
-              @current-change="handleAllPageChange"
+              :total="approvedTotal"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleApprovedSizeChange"
+              @current-change="handleApprovedPageChange"
               background
               class="custom-pagination"
           />
         </div>
+      </el-tab-pane>
 
+      <!-- 已拒绝申请列表 -->
+      <el-tab-pane label="已拒绝" name="rejected">
+        <el-table :data="rejectedList" style="width: 100%" v-loading="rejectedLoading">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column label="宠物" width="150">
+            <template #default="{ row }">
+              {{ row.pet.name }}
+            </template>
+          </el-table-column>
+          <el-table-column label="申请人" width="150">
+            <template #default="{ row }">
+              {{ row.adopter.username }}
+            </template>
+          </el-table-column>
+          <el-table-column label="联系方式" width="150">
+            <template #default="{ row }">{{ row.contact || '-' }}</template>
+          </el-table-column>
+          <el-table-column prop="applyTime" label="申请时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.applyTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="reviewTime" label="审核时间" width="180">
+            <template #default="{ row }">
+              {{ row.reviewTime ? formatTime(row.reviewTime) : '-' }}
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="pagination-wrapper">
+          <el-pagination
+              v-model:current-page="rejectedPage"
+              v-model:page-size="rejectedPageSize"
+              :page-sizes="[5, 10, 20, 50]"
+              :total="rejectedTotal"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleRejectedSizeChange"
+              @current-change="handleRejectedPageChange"
+              background
+              class="custom-pagination"
+          />
+        </div>
       </el-tab-pane>
     </el-tabs>
 
@@ -158,7 +171,7 @@
       <el-form :model="visitForm" label-width="120px" class="visit-form">
         <el-form-item label="回访方式" required>
           <el-radio-group v-model="visitForm.visitType">
-            <el-radio label="PHONE">📞 电话回访</el-radio>
+            <el-radio label="PHONE"> 电话回访</el-radio>
             <el-radio label="ON_SITE">🏠 上门回访</el-radio>
             <el-radio label="ONLINE">💬 在线回访</el-radio>
           </el-radio-group>
@@ -179,7 +192,7 @@
           <el-radio-group v-model="visitForm.petStatus">
             <el-radio label="HEALTHY">✅ 适应良好</el-radio>
             <el-radio label="ADAPTING">⚠️ 适应中</el-radio>
-            <el-radio label="ISSUES">❌ 存在问题</el-radio>
+            <el-radio label="ISSUES"> 存在问题</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -274,52 +287,38 @@
 </template>
 
 <script setup>
-/**
- * 领养申请管理组件
- * 管理员专用页面，用于审核领养申请、添加回访记录、查看回访历史
- */
 import { ref, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
 
-/** 当前激活的标签页：pending(待审核) 或 all(所有申请) */
 const activeTab = ref('pending')
-/** 待审核申请列表数据 */
 const pendingList = ref([])
-/** 所有申请列表数据 */
-const allList = ref([])
-/** 当前登录的管理员用户信息 */
+const approvedList = ref([])
+const rejectedList = ref([])
 const currentUser = ref(null)
 
-/** 待审核列表加载状态 */
 const pendingLoading = ref(false)
-/** 所有申请列表加载状态 */
-const allLoading = ref(false)
-/** 待审核列表当前页码 */
-const pendingPage = ref(1)
-/** 待审核列表每页条数 */
-const pendingPageSize = ref(10)
-/** 待审核列表总条数 */
-const pendingTotal = ref(0)
-/** 所有申请列表当前页码 */
-const allPage = ref(1)
-/** 所有申请列表每页条数 */
-const allPageSize = ref(10)
-/** 所有申请列表总条数 */
-const allTotal = ref(0)
+const approvedLoading = ref(false)
+const rejectedLoading = ref(false)
 
-/** 回访记录弹窗显示状态 */
+const pendingPage = ref(1)
+const pendingPageSize = ref(10)
+const pendingTotal = ref(0)
+
+const approvedPage = ref(1)
+const approvedPageSize = ref(10)
+const approvedTotal = ref(0)
+
+const rejectedPage = ref(1)
+const rejectedPageSize = ref(10)
+const rejectedTotal = ref(0)
+
 const visitDialogVisible = ref(false)
-/** 回访历史弹窗显示状态 */
 const historyDialogVisible = ref(false)
-/** 当前操作的申请记录 */
 const currentApplication = ref(null)
-/** 回访历史数据列表 */
 const visitHistory = ref([])
-/** 提交回访记录加载状态 */
 const submitting = ref(false)
 
-/** 回访记录表单数据 */
 const visitForm = ref({
   visitType: 'PHONE',
   visitTime: '',
@@ -330,46 +329,22 @@ const visitForm = ref({
   nextVisitTime: ''
 })
 
-/**
- * 获取当前登录用户信息
- */
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
   try { return JSON.parse(userStr) } catch { return null }
 }
 
-/**
- * 格式化时间为本地字符串格式
- */
 const formatTime = (time) => {
   if (!time) return '-'
   return new Date(time).toLocaleString('zh-CN')
 }
 
-/**
- * 格式化时间为日期格式
- */
 const formatDate = (time) => {
   if (!time) return '-'
   return new Date(time).toLocaleDateString('zh-CN')
 }
 
-/**
- * 将申请状态码转换为中文显示
- */
-const statusText = (status) => {
-  const map = {
-    'PENDING': '待审核',
-    'APPROVED': '已通过',
-    'REJECTED': '已拒绝'
-  }
-  return map[status] || status
-}
-
-/**
- * 将回访方式转换为中文显示
- */
 const getVisitTypeText = (type) => {
   const map = {
     'PHONE': '📞 电话回访',
@@ -379,9 +354,6 @@ const getVisitTypeText = (type) => {
   return map[type] || type
 }
 
-/**
- * 获取回访方式对应的标签颜色类型
- */
 const getVisitTypeTag = (type) => {
   const map = {
     'PHONE': 'primary',
@@ -391,9 +363,6 @@ const getVisitTypeTag = (type) => {
   return map[type] || ''
 }
 
-/**
- * 将宠物状态转换为中文显示
- */
 const getPetStatusText = (status) => {
   const map = {
     'HEALTHY': '✅ 适应良好',
@@ -403,9 +372,6 @@ const getPetStatusText = (status) => {
   return map[status] || status
 }
 
-/**
- * 获取宠物状态对应的标签颜色类型
- */
 const getPetStatusTag = (status) => {
   const map = {
     'HEALTHY': 'success',
@@ -415,15 +381,12 @@ const getPetStatusTag = (status) => {
   return map[status] || ''
 }
 
-/**
- * 加载待审核申请列表数据
- */
 const loadPending = async () => {
   pendingLoading.value = true
   try {
     const data = await get('/api/adoption/pending', {
       username: currentUser.value.username,
-      page: pendingPage.value - 1, // 后端页码从0开始
+      page: pendingPage.value - 1,
       size: pendingPageSize.value
     })
     pendingList.value = data.content
@@ -435,63 +398,73 @@ const loadPending = async () => {
   }
 }
 
-/**
- * 加载所有申请列表数据
- */
-const loadAll = async () => {
-  allLoading.value = true
+const loadApproved = async () => {
+  approvedLoading.value = true
   try {
-    const data = await get('/api/adoption/all', {
+    const data = await get('/api/adoption/approved', {
       username: currentUser.value.username,
-      page: allPage.value - 1,
-      size: allPageSize.value
+      page: approvedPage.value - 1,
+      size: approvedPageSize.value
     })
-    allList.value = data.content
-    allTotal.value = data.totalElements
+    approvedList.value = data.content
+    approvedTotal.value = data.totalElements
   } catch (error) {
     ElMessage.error(error.message || '加载失败')
   } finally {
-    allLoading.value = false
+    approvedLoading.value = false
   }
 }
 
-/**
- * 待审核列表页码变化处理
- */
+const loadRejected = async () => {
+  rejectedLoading.value = true
+  try {
+    const data = await get('/api/adoption/rejected', {
+      username: currentUser.value.username,
+      page: rejectedPage.value - 1,
+      size: rejectedPageSize.value
+    })
+    rejectedList.value = data.content
+    rejectedTotal.value = data.totalElements
+  } catch (error) {
+    ElMessage.error(error.message || '加载失败')
+  } finally {
+    rejectedLoading.value = false
+  }
+}
+
 const handlePendingPageChange = (page) => {
   pendingPage.value = page
   loadPending()
 }
 
-/**
- * 待审核列表每页条数变化处理
- */
 const handlePendingSizeChange = (size) => {
   pendingPageSize.value = size
   pendingPage.value = 1
   loadPending()
 }
 
-/**
- * 所有申请列表页码变化处理
- */
-const handleAllPageChange = (page) => {
-  allPage.value = page
-  loadAll()
+const handleApprovedPageChange = (page) => {
+  approvedPage.value = page
+  loadApproved()
 }
 
-/**
- * 所有申请列表每页条数变化处理
- */
-const handleAllSizeChange = (size) => {
-  allPageSize.value = size
-  allPage.value = 1
-  loadAll()
+const handleApprovedSizeChange = (size) => {
+  approvedPageSize.value = size
+  approvedPage.value = 1
+  loadApproved()
 }
 
-/**
- * 审核申请（通过/拒绝）
- */
+const handleRejectedPageChange = (page) => {
+  rejectedPage.value = page
+  loadRejected()
+}
+
+const handleRejectedSizeChange = (size) => {
+  rejectedPageSize.value = size
+  rejectedPage.value = 1
+  loadRejected()
+}
+
 const review = (applicationId, action) => {
   const text = action === 'approve' ? '通过' : '拒绝'
   ElMessageBox.confirm(`确定要${text}这条申请吗？`, '提示', {
@@ -500,28 +473,20 @@ const review = (applicationId, action) => {
     type: 'warning'
   }).then(async () => {
     try {
-      // 注意：后端这里用的是 @RequestParam，所以参数必须跟在 URL 后面
       const url = `/api/adoption/review/${applicationId}?username=${currentUser.value.username}&action=${action}`
-
-      // 因为不需要传 Body，我们可以直接调用 fetch 或者让 post 发个空对象
       await post(url, {})
-
       ElMessage.success(`${text}成功`)
       loadPending()
-      loadAll()
+      loadApproved()
+      loadRejected()
     } catch (error) {
       ElMessage.error(error.message || '操作失败')
     }
   }).catch(() => {})
 }
 
-/**
- * 打开添加回访记录弹窗
- */
 const showVisitDialog = async (application) => {
   currentApplication.value = application
-
-  // 重置表单
   visitForm.value = {
     visitType: 'PHONE',
     visitTime: new Date().toISOString().slice(0, 19),
@@ -531,8 +496,6 @@ const showVisitDialog = async (application) => {
     needFollowUp: false,
     nextVisitTime: ''
   }
-
-  // 加载历史回访记录，尝试带出“下次回访时间”
   try {
     const history = await get(`/api/visit/list/${application.id}`)
     if (history && history.length > 0) {
@@ -544,22 +507,16 @@ const showVisitDialog = async (application) => {
   } catch (error) {
     console.error('加载回访历史失败', error)
   }
-
   visitDialogVisible.value = true
 }
 
-/**
- * 提交回访记录
- */
 const submitVisitRecord = async () => {
   if (!visitForm.value.visitTime || !visitForm.value.petStatus) {
     ElMessage.warning('请填写必填项')
     return
   }
-
   submitting.value = true
   try {
-    // 调用封装好的 post 方法，第二个参数会自动转为 JSON Body
     await post('/api/visit/add', {
       username: currentUser.value.username,
       applicationId: currentApplication.value.id,
@@ -571,10 +528,9 @@ const submitVisitRecord = async () => {
       needFollowUp: visitForm.value.needFollowUp,
       nextVisitTime: visitForm.value.nextVisitTime
     })
-
     ElMessage.success('回访记录添加成功')
     visitDialogVisible.value = false
-    loadAll() // 刷新所有申请列表
+    loadApproved()
   } catch (error) {
     ElMessage.error(error.message || '添加失败')
   } finally {
@@ -582,22 +538,16 @@ const submitVisitRecord = async () => {
   }
 }
 
-/**
- * 查看回访历史记录
- */
 const viewVisitHistory = async (application) => {
   currentApplication.value = application
   try {
     visitHistory.value = await get(`/api/visit/list/${application.id}`)
-    historyDialogVisible.value = true // 打开历史弹窗
+    historyDialogVisible.value = true
   } catch (error) {
     ElMessage.error(error.message || '加载回访历史失败')
   }
 }
 
-/**
- * 删除回访记录
- */
 const deleteVisitRecord = (visitId) => {
   ElMessageBox.confirm('确定要删除这条回访记录吗？', '提示', {
     confirmButtonText: '确定',
@@ -605,11 +555,8 @@ const deleteVisitRecord = (visitId) => {
     type: 'warning'
   }).then(async () => {
     try {
-      // 修复：将 username 作为第二个参数传入，request.js 会处理成 ?username=xxx
       await del(`/api/visit/${visitId}`, { username: currentUser.value.username })
-
       ElMessage.success('删除成功')
-      // 重新加载当前申请的回访历史
       if (currentApplication.value) {
         viewVisitHistory(currentApplication.value)
       }
@@ -619,27 +566,21 @@ const deleteVisitRecord = (visitId) => {
   }).catch(() => {})
 }
 
-/**
- * 组件挂载时初始化：获取用户信息并加载列表数据
- */
 onMounted(() => {
   currentUser.value = getCurrentUser()
-
   if (!currentUser.value || currentUser.value.role !== 'ADMIN') {
     ElMessage.error('无权限访问，请使用管理员账号登录')
     return
   }
-
   loadPending()
-  loadAll()
+  loadApproved()
+  loadRejected()
 })
 
-/**
- * 监听标签页切换，自动刷新对应列表数据
- */
 watch(activeTab, (newTab) => {
   if (newTab === 'pending') loadPending()
-  else loadAll()
+  else if (newTab === 'approved') loadApproved()
+  else loadRejected()
 })
 </script>
 

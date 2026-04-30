@@ -4,7 +4,8 @@
       width="520px"
       @close="handleClose"
       class="login-dialog"
-      :show-close="false">
+      :show-close="false"
+      :style="dialogStyle">
     <div class="login-header">
       <svg class="header-bg" viewBox="0 0 520 200" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -130,7 +131,7 @@
  * 登录/注册弹窗组件
  * 提供用户登录和注册功能，支持表单校验与后端 API 交互
  */
-import { ref, defineProps, defineEmits } from 'vue'
+import { ref, defineProps, defineEmits, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
 
@@ -151,6 +152,11 @@ const registerForm = ref({
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 
+
+// 动态计算对话框位置：注册时更靠上
+const dialogStyle = computed(() => ({
+  marginTop: tab.value === 'register' ? '2vh' : '15vh'
+}))
 /**
  * 处理弹窗关闭事件，向父组件同步显示状态
  */
@@ -234,8 +240,9 @@ const doRegister = async () => {
   overflow: hidden;
 }
 
-.login-dialog :deep(.el-dialog__header) {
-  display: none;
+.login-dialog :deep(.el-overlay) {
+  align-items: flex-start;
+  padding-top: 5vh;
 }
 
 .login-dialog :deep(.el-dialog__body) {
@@ -263,103 +270,108 @@ const doRegister = async () => {
 
 .login-tabs :deep(.el-tabs__item) {
   font-size: 16px;
-  font-weight: 500;
-  color: #6B7280;
+  font-weight: 600;
+  color: #264143;
 }
 
 .login-tabs :deep(.el-tabs__item.is-active) {
   color: #E07A5F;
+  font-weight: 800;
 }
 
 .login-tabs :deep(.el-tabs__active-bar) {
   background-color: #E07A5F;
+  height: 3px;
 }
 
 .login-form {
   padding: 0 4px;
 }
 
+/* 输入框样式 - 参考 forms.html 美化 */
 .custom-input :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(61,64,91,0.08);
-  padding: 8px 16px;
+  border: 2px solid #264143;
+  border-radius: 4px;
+  box-shadow: 3px 4px 0px 1px #E99F4C;
+  padding: 12px 16px;
+  background: #EDDCD9;
+  transition: all 0.2s ease;
 }
 
 .custom-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px rgba(224, 122, 95, 0.2);
+  transform: translateY(4px);
+  box-shadow: 1px 2px 0px 0px #E99F4C;
+  border-color: #E07A5F;
 }
 
-.custom-select :deep(.el-select__wrapper) {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(61,64,91,0.08);
+.custom-input :deep(.el-input__inner) {
+  font-size: 15px;
+  color: #264143;
 }
 
-.submit-btn {
-  margin-top: 8px;
-  background: #E07A5F !important;
-  border-color: #E07A5F !important;
-  border-radius: 12px !important;
-  height: 48px !important;
-  font-size: 16px !important;
-  font-weight: 500 !important;
+.custom-input :deep(.el-input__prefix) {
+  color: #264143;
 }
 
-.submit-btn:hover {
-  background: #D06A4F !important;
-  border-color: #D06A4F !important;
-}
-
-.login-footer {
-  text-align: center;
-  padding: 20px 40px 30px;
-  color: #6B7280;
-  font-size: 14px;
-}
-
-.login-footer .el-link {
-  margin-left: 8px;
-  color: #E07A5F;
-  font-weight: 500;
-}
-
-/* 对角线扫过动画按钮 - 修正版 */
+/* 保留原有的对角线扫过动画按钮 */
 .diagonal-btn {
   color: #E07A5F !important;
   border: 2px solid #E07A5F !important;
-  background-color: transparent !important; /* 强制透明背景 */
+  background-color: transparent !important;
   position: relative !important;
-  overflow: hidden !important; /* 确保色块不溢出 */
-  z-index: 1 !important; /* 建立层叠上下文 */
+  overflow: hidden !important;
+  z-index: 1 !important;
   transition: color 0.4s ease !important;
   border-radius: 12px !important;
   height: 48px !important;
   font-weight: bold !important;
+  margin-top: 8px;
 }
 
-/* 悬停时文字变白 */
 .diagonal-btn:hover {
   color: white !important;
   border-color: #E07A5F !important;
 }
 
-/* 扫描色块 */
 .diagonal-btn::before {
   content: "" !important;
   position: absolute !important;
   top: 0 !important;
-  left: 0 !important; /* 从左侧开始 */
+  left: 0 !important;
   width: 0% !important;
   height: 100% !important;
   background-color: #E07A5F !important;
-  transform: skewX(-20deg) translateX(-10%) !important; /* 倾斜并稍微左移 */
+  transform: skewX(-20deg) translateX(-10%) !important;
   transform-origin: left !important;
-  z-index: -1 !important; /* 确保在文字下方 */
+  z-index: -1 !important;
   transition: width 0.4s ease !important;
 }
 
-/* 悬停时色块展开 */
 .diagonal-btn:hover::before {
-  width: 120% !important; /* 展开宽度覆盖整个按钮 */
+  width: 120% !important;
 }
 
+/* 底部链接 */
+.login-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 40px 30px;
+  color: #264143;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.login-footer .el-link {
+  margin-left: 0;
+  color: #E07A5F;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+}
+
+.login-footer .el-link:hover {
+  color: #E07A5F;
+}
 </style>

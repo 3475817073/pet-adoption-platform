@@ -1,6 +1,5 @@
 <template>
   <div>
-    <el-page-header title="互助交流" content="物资共享、医疗咨询、养宠经验 💬" />
 
     <el-button type="primary" @click="showPublishDialog" style="margin-bottom: 20px; background: #E07A5F; border-color: #E07A5F; border-radius: 20px; padding: 10px 24px">
       + 发布新互助帖
@@ -106,7 +105,7 @@
       <el-alert v-if="!isLoggedIn" title="请先登录后再参与评论" type="warning" :closable="false" style="margin-bottom: 15px; background: #FFF9E6; border-color: #F2CC8F">
         <template #default>
           登录后可发布评论和互助帖
-          <el-button type="primary" size="small" @click="handleNeedLogin" style="margin-left: 10px; background: #E07A5F; border-color: #E07A5F">去登录</el-button>
+          <el-button type="primary" size="small" @click="triggerLogin" style="margin-left: 10px; background: #E07A5F; border-color: #E07A5F">去登录</el-button>
         </template>
       </el-alert>
 
@@ -199,12 +198,13 @@
  * 互助交流页面组件
  * 提供帖子浏览、筛选、发布、详情查看、评论与回复、删除等完整交互功能
  */
-import {ref, onMounted, computed, nextTick, watch} from 'vue'
+import {ref, onMounted, computed, nextTick, watch, inject} from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
 import { Delete } from '@element-plus/icons-vue'
 
 const emit = defineEmits(['needLogin'])
+const triggerLogin = inject('triggerLogin')
 
 const posts = ref([])
 
@@ -428,7 +428,7 @@ const handleJumpPage = () => {
 const showPublishDialog = () => {
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能发布互助帖')
-    emit('needLogin')
+    triggerLogin()
     return
   }
   postForm.value = { category: '', title: '', content: '' }
@@ -505,9 +505,10 @@ const submitComment = async () => {
 
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能评论')
-    emit('needLogin')
+    triggerLogin()
     return
   }
+
 
   const user = getCurrentUser()
   try {
@@ -538,9 +539,10 @@ const submitReply = async (commentId, type) => {
 
   if (!localStorage.getItem('user')) {
     ElMessage.warning('请先登录才能回复')
-    emit('needLogin')
+    triggerLogin()
     return
   }
+
 
   const user = getCurrentUser()
   try {
@@ -621,13 +623,6 @@ const toggleExpand = (index) => {
   expandedReplies.value[index] = !expandedReplies.value[index]
 }
 
-/**
- * 触发父组件的登录引导事件
- */
-const handleNeedLogin = () => {
-  detailVisible.value = false
-  emit('needLogin')
-}
 
 /**
  * 删除主评论的快捷方法

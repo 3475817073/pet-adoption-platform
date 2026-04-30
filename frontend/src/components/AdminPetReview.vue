@@ -1,6 +1,5 @@
 <template>
   <div>
-    <el-page-header title="宠物审核管理" content="审核救助者发布的宠物信息" />
 
     <!-- Tab 切换：待审核/已通过/已拒绝 -->
     <el-tabs v-model="activeTab">

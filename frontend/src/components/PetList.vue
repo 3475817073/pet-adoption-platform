@@ -1,6 +1,33 @@
 <template>
   <div class="pet-list-page">
-    <el-page-header title="可领养宠物" content="找到属于你的小伙伴 🐾" />
+
+    <!-- 顶部 Banner -->
+    <div class="hero-banner">
+      <div class="banner-overlay"></div>
+      <div class="banner-content">
+        <h1 class="banner-title">为宠物找到温暖的家 🏠</h1>
+        <p class="banner-subtitle">浏览待领养的宠物，给它们一个充满爱的家</p>
+
+        <div class="quick-categories">
+          <div class="category-card" @click="filterByType('狗')">
+            <div class="category-icon">🐶</div>
+            <span class="category-name">狗狗</span>
+          </div>
+          <div class="category-card" @click="filterByType('猫')">
+            <div class="category-icon">🐱</div>
+            <span class="category-name">猫咪</span>
+          </div>
+          <div class="category-card" @click="filterByType('其他')">
+            <div class="category-icon">🐰</div>
+            <span class="category-name">其他动物</span>
+          </div>
+          <div class="category-card" @click="resetFilter">
+            <div class="category-icon">🐾</div>
+            <span class="category-name">全部宠物</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- 搜索 + 筛选栏 -->
     <div class="filter-bar">
@@ -45,8 +72,8 @@
     </div>
 
     <!-- 宠物卡片：展示宠物图片、基本信息及操作按钮 -->
-    <el-row :gutter="20">
-      <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" style="margin-bottom: 20px">
+    <el-row :gutter="20" class="pet-grid">
+      <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" class="pet-grid-item">
         <el-card class="pet-card" shadow="never">
           <div class="image-container" @click="showDetail(pet)">
             <img v-if="getPetImageUrl(pet)" :src="getPetImageUrl(pet)" class="pet-image" />
@@ -103,125 +130,32 @@
 
     <el-empty v-if="pets.length === 0 && !loading" description="暂无符合条件的宠物" :image-size="200" />
 
-    <!-- 宠物详情弹窗：仿 Petfinder 左右分栏风格 -->
-    <el-dialog v-model="detailVisible" width="900px" class="pet-detail-dialog" :show-close="true">
-      <div v-if="selectedPet" class="pet-detail-container">
-        <!-- 左侧：图片画廊 -->
-        <div class="detail-gallery">
-          <div class="main-image-wrapper">
-            <img v-if="selectedPet.photos && selectedPet.photos.length > 0"
-                 :src="'http://localhost:8080' + selectedPet.photos[currentPhotoIndex]"
-                 class="main-image" />
-            <div v-else class="no-image-large">
-              <span class="no-image-icon"></span>
-            </div>
-
-            <!-- 左右切换箭头 -->
-            <button
-                v-if="selectedPet.photos && selectedPet.photos.length > 1"
-                class="arrow-btn prev-btn"
-                @click="prevPhoto"
-                @click.stop>
-              ‹
-            </button>
-            <button
-                v-if="selectedPet.photos && selectedPet.photos.length > 1"
-                class="arrow-btn next-btn"
-                @click="nextPhoto"
-                @click.stop>
-              ›
-            </button>
-          </div>
-
-          <!-- 缩略图列表 -->
-          <div v-if="selectedPet.photos && selectedPet.photos.length > 1" class="thumbnail-list">
-            <img
-                v-for="(photo, index) in selectedPet.photos"
-                :key="index"
-                :src="'http://localhost:8080' + photo"
-                class="thumbnail"
-                :class="{ 'active': currentPhotoIndex === index }"
-                @click="currentPhotoIndex = index"
-            />
-          </div>
-        </div>
-
-        <!-- 右侧：详细信息 -->
-        <div class="detail-content">
-          <div class="detail-header">
-            <h2>{{ selectedPet.name }}</h2>
-            <div class="basic-tags">
-              <el-tag class="tag-gender">{{ selectedPet.gender }}</el-tag>
-              <el-tag class="tag-age">{{ selectedPet.age }} 岁</el-tag>
-              <el-tag class="tag-type">{{ selectedPet.type }}</el-tag>
-            </div>
-          </div>
-
-          <div class="detail-section">
-            <h4>📝 关于 {{ selectedPet.name }}</h4>
-            <p class="story-text">{{ selectedPet.description || '这只小家伙正在等待一个温暖的家...' }}</p>
-          </div>
-
-          <div v-if="selectedPet.tags && selectedPet.tags.length > 0" class="detail-section">
-            <h4>✨ 性格特征</h4>
-            <div class="personality-tags">
-              <el-tag
-                  v-for="(tag, index) in getSafeTags(selectedPet.tags)"
-                  :key="index"
-                  class="p-tag"
-                  effect="light">
-                {{ tag }}
-              </el-tag>
-            </div>
-          </div>
-
-          <div class="detail-section">
-            <h4>💉 健康状况</h4>
-            <div class="health-grid">
-              <div class="health-item" :class="{ 'inactive': !selectedPet.vaccinated }">
-                {{ selectedPet.vaccinated ? '✅' : '❌' }} 已疫苗
-              </div>
-              <div class="health-item" :class="{ 'inactive': !selectedPet.neutered }">
-                {{ selectedPet.neutered ? '✅' : '❌' }} 已绝育
-              </div>
-              <div class="health-item" :class="{ 'inactive': !selectedPet.dewormed }">
-                {{ selectedPet.dewormed ? '✅' : '❌' }} 已驱虫
-              </div>
-            </div>
-          </div>
-
-          <div class="detail-actions">
-            <el-button type="primary" size="large" class="apply-btn"
-                       :disabled="selectedPet.status === 'ADOPTED'"
-                       @click="applyFromDetail">
-              {{ selectedPet.status === 'ADOPTED' ? '已被领养' : '申请领养' }}
-            </el-button>
-          </div>
-        </div>
-      </div>
-    </el-dialog>
-
-
-
     <AdoptionApply
         v-if="applyDialogVisible"
-        :pet="selectedPet"
+        :pet="currentApplyPet"
         @close="applyDialogVisible = false"
         @success="onApplySuccess"
     />
   </div>
 </template>
 
-<script setup>
-/**
+<script>export default {
+  name: 'PetList'
+}
+</script>
+
+<script setup>/**
  * 宠物列表页面组件
  * 提供宠物浏览、多条件筛选、分页查看、详情预览及领养申请功能
  */
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onActivated, watch, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
 import { get } from '../utils/request.js'
 
+const router = useRouter()
+const route = useRoute()
 const emit = defineEmits(['needLogin'])
 
 const pets = ref([])
@@ -230,9 +164,7 @@ const filterType = ref('')
 const filterGender = ref('')
 const filterAge = ref('')
 const applyDialogVisible = ref(false)
-const selectedPet = ref(null)
-const detailVisible = ref(false)
-const currentPhotoIndex = ref(0)
+const currentApplyPet = ref(null)
 const loading = ref(false)
 
 /** 当前页码 */
@@ -243,6 +175,8 @@ const pageSize = ref(12)
 const total = ref(0)
 const jumpPage = ref(1)
 
+/** 保存滚动位置 */
+let savedScrollTop = 0
 
 /**
  * 从后端加载宠物列表数据，支持分页与多条件筛选
@@ -274,7 +208,30 @@ const loadPets = async () => {
  * 组件挂载时执行：初始化加载宠物列表
  */
 onMounted(() => {
+  // 从路由参数恢复分页状态
+  if (route.query.page) {
+    currentPage.value = parseInt(route.query.page)
+  }
+  if (route.query.size) {
+    pageSize.value = parseInt(route.query.size)
+  }
   loadPets()
+})
+
+/**
+ * 组件激活时执行：恢复滚动位置（keep-alive 缓存后重新显示）
+ */
+onActivated(() => {
+  if (savedScrollTop > 0) {
+    window.scrollTo(0, savedScrollTop)
+  }
+})
+
+/**
+ * 组件卸载前：保存当前滚动位置
+ */
+onUnmounted(() => {
+  savedScrollTop = window.scrollY || window.pageYOffset
 })
 
 /**
@@ -314,36 +271,20 @@ const handleJumpPage = () => {
 
 
 /**
- * 打开宠物详情弹窗，解析并处理宠物图片数据
+ * 跳转到宠物详情页面，携带当前分页参数
  */
 const showDetail = (pet) => {
-
-  selectedPet.value = pet
-  try {
-    if (pet.photoUrls) {
-      selectedPet.value.photos = JSON.parse(pet.photoUrls)
-    } else if (pet.photoUrl) {
-      selectedPet.value.photos = [pet.photoUrl]
-    } else {
-      selectedPet.value.photos = []
+  savedScrollTop = window.scrollY || window.pageYOffset
+  router.push({
+    path: `/pet/${pet.id}`,
+    query: {
+      page: currentPage.value,
+      size: pageSize.value
     }
-  } catch {
-    selectedPet.value.photos = []
-  }
-  detailVisible.value = true
+  })
 }
 
-const prevPhoto = () => {
-  if (currentPhotoIndex.value > 0) {
-    currentPhotoIndex.value--
-  }
-}
 
-const nextPhoto = () => {
-  if (currentPhotoIndex.value < selectedPet.value.photos.length - 1) {
-    currentPhotoIndex.value++
-  }
-}
 
 /**
  * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
@@ -381,19 +322,7 @@ const getSafeTags = (tagsStr) => {
 }
 
 
-/**
- * 从详情页触发领养申请，校验登录状态
- */
-const applyFromDetail = () => {
-  if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能申请领养')
-    detailVisible.value = false
-    emit('needLogin')
-    return
-  }
-  detailVisible.value = false
-  applyDialogVisible.value = true
-}
+
 
 /**
  * 从列表页触发领养申请，校验登录状态与宠物领养状态
@@ -408,13 +337,9 @@ const applyAdopt = (pet) => {
     ElMessage.info('这只宠物已经被领养啦~')
     return
   }
-  selectedPet.value = pet
+  currentApplyPet.value = pet
   applyDialogVisible.value = true
 }
-
-// const onApplySuccess = () => {
-//   ElMessage.success('领养申请已提交！请等待管理员审核')
-// }
 
 /**
  * 重置所有筛选条件并重新加载第一页数据
@@ -428,27 +353,149 @@ const resetFilter = () => {
   loadPets()
 }
 
+/**
+ * 快捷筛选：按类型筛选
+ */
+const filterByType = (type) => {
+  filterType.value = type
+  currentPage.value = 1
+}
+
+/**
+ * 领养申请成功回调
+ */
+const onApplySuccess = () => {
+  ElMessage.success('领养申请已提交！请等待管理员审核')
+}
+
 </script>
 
 
 <style scoped>/* ===== 页面背景与整体布局 ===== */
 .pet-list-page {
-  background: #ffffff;
+  background: #f9fafb;
   min-height: 100vh;
   padding-bottom: 40px;
+  width: 100%;
 }
 
-/* ===== 筛选栏样式 ===== */
+/* ===== 顶部 Banner - 全宽 ===== */
+.hero-banner {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: url('@/assets/top-banner.png') center/cover no-repeat;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.banner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.2));
+}
+
+.banner-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 20px;
+  text-align: center;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.banner-title {
+  font-size: 42px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 16px 0;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+}
+
+.banner-subtitle {
+  font-size: 18px;
+  color: rgba(255, 255, 255, 0.95);
+  margin: 0 0 40px 0;
+  font-weight: 500;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* 快捷分类入口 */
+.quick-categories {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.category-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 24px 32px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 120px;
+  backdrop-filter: blur(8px);
+}
+
+.category-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+}
+
+.category-card:active {
+  transform: translateY(-4px);
+}
+
+.category-icon {
+  font-size: 48px;
+  line-height: 1;
+}
+
+.category-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  white-space: nowrap;
+}
+
+/* ===== 筛选栏样式 - 全宽 ===== */
 .filter-bar {
-  margin: 20px 0;
+  margin: 30px 40px;
   padding: 20px 24px;
   background: #ffffff;
-  border-radius: 24px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
 }
 
-/* ===== 宠物卡片 - Bento Box 风格 ===== */
+/* ===== 宠物卡片网格 - 全宽等高布局 ===== */
+.pet-grid {
+  width: 100%;
+  padding: 0 40px;
+}
+
+.pet-grid-item {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+/* 卡片占满列高度 */
 .pet-card {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 20px;
@@ -459,8 +506,11 @@ const resetFilter = () => {
   animation: slideUp 0.6s ease-out forwards;
   opacity: 0;
   transform: translateY(20px);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
 }
-
 
 /* 卡片加载滑入动画 */
 @keyframes slideUp {
@@ -471,18 +521,18 @@ const resetFilter = () => {
 }
 
 /* 为不同位置的卡片添加延迟，形成错落感 */
-.el-col:nth-child(1) .pet-card { animation-delay: 0.05s; }
-.el-col:nth-child(2) .pet-card { animation-delay: 0.1s; }
-.el-col:nth-child(3) .pet-card { animation-delay: 0.15s; }
-.el-col:nth-child(4) .pet-card { animation-delay: 0.2s; }
-.el-col:nth-child(5) .pet-card { animation-delay: 0.25s; }
-.el-col:nth-child(6) .pet-card { animation-delay: 0.3s; }
-.el-col:nth-child(7) .pet-card { animation-delay: 0.35s; }
-.el-col:nth-child(8) .pet-card { animation-delay: 0.4s; }
-.el-col:nth-child(9) .pet-card { animation-delay: 0.45s; }
-.el-col:nth-child(10) .pet-card { animation-delay: 0.5s; }
-.el-col:nth-child(11) .pet-card { animation-delay: 0.55s; }
-.el-col:nth-child(12) .pet-card { animation-delay: 0.6s; }
+.pet-grid-item:nth-child(1) .pet-card { animation-delay: 0.05s; }
+.pet-grid-item:nth-child(2) .pet-card { animation-delay: 0.1s; }
+.pet-grid-item:nth-child(3) .pet-card { animation-delay: 0.15s; }
+.pet-grid-item:nth-child(4) .pet-card { animation-delay: 0.2s; }
+.pet-grid-item:nth-child(5) .pet-card { animation-delay: 0.25s; }
+.pet-grid-item:nth-child(6) .pet-card { animation-delay: 0.3s; }
+.pet-grid-item:nth-child(7) .pet-card { animation-delay: 0.35s; }
+.pet-grid-item:nth-child(8) .pet-card { animation-delay: 0.4s; }
+.pet-grid-item:nth-child(9) .pet-card { animation-delay: 0.45s; }
+.pet-grid-item:nth-child(10) .pet-card { animation-delay: 0.5s; }
+.pet-grid-item:nth-child(11) .pet-card { animation-delay: 0.55s; }
+.pet-grid-item:nth-child(12) .pet-card { animation-delay: 0.6s; }
 
 /* Hover 悬浮提升效果 */
 .pet-card:hover {
@@ -491,13 +541,13 @@ const resetFilter = () => {
   border-color: #d1d5db;
 }
 
-
 /* ===== 图片容器 ===== */
 .image-container {
   position: relative;
   overflow: hidden;
   cursor: pointer;
   height: 280px;
+  flex-shrink: 0;
 }
 
 .pet-image {
@@ -596,6 +646,10 @@ const resetFilter = () => {
 /* ===== 卡片信息区 ===== */
 .pet-info {
   padding: 24px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 180px;
 }
 
 .pet-name {
@@ -628,12 +682,13 @@ const resetFilter = () => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 14px;
+  min-height: 44px;
 }
 
 /* ===== 我要领养按钮 - 全宽深珊瑚色 ===== */
 .adopt-btn {
   width: 100%;
-  margin-top: 16px;
+  margin-top: auto;
   background: #a9583e;
   border-color: #a9583e;
   font-weight: 600;
@@ -719,215 +774,6 @@ const resetFilter = () => {
   box-shadow: 0 6px 16px rgba(204, 120, 92, 0.35);
 }
 
-/* ===== 详情页样式 ===== */
-.pet-detail-dialog :deep(.el-dialog__header) { display: none; }
-.pet-detail-dialog :deep(.el-dialog__body) { padding: 24px; }
-
-.pet-detail-container {
-  display: flex;
-  gap: 32px;
-}
-
-.detail-gallery { flex: 1.2; }
-
-.main-image-wrapper {
-  position: relative;
-}
-
-/* 切换箭头按钮 */
-.arrow-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.9);
-  border: none;
-  border-radius: 50%;
-  font-size: 24px;
-  color: #374151;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-}
-
-.arrow-btn:hover {
-  background: #ffffff;
-  transform: translateY(-50%) scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.prev-btn {
-  left: 16px;
-}
-
-.next-btn {
-  right: 16px;
-}
-
-
-.main-image {
-  width: 100%;
-  height: 420px;
-  object-fit: cover;
-  border-radius: 24px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
-
-.no-image-large {
-  width: 100%;
-  height: 420px;
-  background: url('@/assets/pets-banner.png') center/cover no-repeat;
-  background-color: #f3f4f6;
-  border-radius: 24px;
-  border: 1px solid #e5e7eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.no-image-icon {
-  font-size: 80px;
-  opacity: 0.3;
-}
-
-.thumbnail-list {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.thumbnail {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: 12px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.thumbnail:hover {
-  border-color: #cc785c;
-  transform: scale(1.05);
-}
-
-.thumbnail.active {
-  border-color: #cc785c;
-  box-shadow: 0 0 0 3px rgba(204, 120, 92, 0.2);
-}
-
-.detail-content { flex: 1; display: flex; flex-direction: column; }
-
-.detail-header h2 {
-  font-size: 36px;
-  color: #111827;
-  margin: 0 0 16px 0;
-  letter-spacing: -0.5px;
-  font-weight: 700;
-}
-
-.basic-tags { display: flex; gap: 10px; margin-bottom: 28px; }
-.tag-gender {
-  background: rgba(59, 130, 246, 0.12);
-  color: #1e40af;
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 9999px;
-  padding: 6px 14px;
-  font-weight: 600;
-}
-.tag-age {
-  background: rgba(16, 185, 129, 0.12);
-  color: #065f46;
-  border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 9999px;
-  padding: 6px 14px;
-  font-weight: 600;
-}
-.tag-type {
-  background: rgba(245, 158, 11, 0.12);
-  color: #92400e;
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 9999px;
-  padding: 6px 14px;
-  font-weight: 600;
-}
-
-.detail-section { margin-bottom: 28px; }
-.detail-section h4 {
-  color: #1f2937;
-  margin-bottom: 12px;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.story-text {
-  line-height: 1.7;
-  color: #4b5563;
-  font-size: 15px;
-}
-
-.health-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.health-item {
-  background: #f9fafb;
-  padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 14px;
-  color: #374151;
-  border: 1px solid #e5e7eb;
-  font-weight: 500;
-}
-
-.apply-btn {
-  margin-top: auto;
-  background: #a9583e;
-  border: none;
-  border-radius: 16px;
-  height: 52px;
-  font-size: 16px;
-  font-weight: 600;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(169, 88, 62, 0.25);
-  position: relative;
-  overflow: hidden;
-  z-index: 1;
-}
-
-.apply-btn::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
-}
-
-.apply-btn:hover::before {
-  left: 100%;
-}
-
-.apply-btn:hover:not(:disabled) {
-  background: #8f4a33;
-  transform: scale(1.03);
-  box-shadow: 0 6px 16px rgba(169, 88, 62, 0.35);
-}
-
-.apply-btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
 /* ===== 分页样式 ===== */
 .pagination-wrapper {
   margin-top: 40px;
@@ -969,6 +815,7 @@ const resetFilter = () => {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
+  min-height: 28px;
 }
 
 .mini-tag {
@@ -979,4 +826,5 @@ const resetFilter = () => {
   border-radius: 8px;
   font-weight: 500;
 }
+
 </style>

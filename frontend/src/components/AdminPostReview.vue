@@ -1,6 +1,5 @@
 <template>
   <div>
-    <el-page-header title="帖子审核管理" content="审核用户发布的互助帖子" />
 
     <!-- Tab 切换：待审核/已通过/已拒绝 -->
     <el-tabs v-model="activeTab">

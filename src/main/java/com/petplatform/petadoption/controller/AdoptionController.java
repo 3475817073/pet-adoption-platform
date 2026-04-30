@@ -152,6 +152,54 @@ public class AdoptionController {
         }
     }
 
+    /**
+     * 查看已通过的领养申请（仅限管理员，分页）
+     */
+    @GetMapping("/approved")
+    public ResponseEntity<?> getApprovedApplications(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reviewTime"));
+            Page<AdoptionApplication> applications = adoptionApplicationService.findApprovedPage(pageable);
+            return ResponseEntity.ok(applications);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 查看已拒绝的领养申请（仅限管理员，分页）
+     */
+    @GetMapping("/rejected")
+    public ResponseEntity<?> getRejectedApplications(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+            if (user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限访问");
+            }
+            Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "reviewTime"));
+            Page<AdoptionApplication> applications = adoptionApplicationService.findRejectedPage(pageable);
+            return ResponseEntity.ok(applications);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
 
     /**
      * 审核领养申请（通过或拒绝）
