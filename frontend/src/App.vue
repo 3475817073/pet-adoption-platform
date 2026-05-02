@@ -134,7 +134,7 @@ const showLoginDialog = () => {
 </script>
 
 
-<<style>
+<style>
 /* ===== 全局重置 ===== */
 * {
   margin: 0;
@@ -143,9 +143,11 @@ const showLoginDialog = () => {
 }
 
 html, body {
-  height: 100%;
+  min-height: 100%;
+  height: auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 #app {

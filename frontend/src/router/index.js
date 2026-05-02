@@ -59,6 +59,11 @@ const router = createRouter({
     history: createWebHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
+        // 如果是从详情页返回列表页，禁止路由层级重置滚动条
+        if (from.path.startsWith('/pet/') && to.path === '/pets') {
+            return false
+        }
+
         if (savedPosition) {
             return savedPosition
         }

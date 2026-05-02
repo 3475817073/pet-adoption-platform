@@ -152,7 +152,7 @@
  * 宠物列表页面组件
  * 提供宠物浏览、多条件筛选、分页查看、详情预览及领养申请功能
  */
-import { ref, onMounted, watch, inject } from 'vue'
+import { ref, onMounted, watch, inject, nextTick, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AdoptionApply from './AdoptionApply.vue'
 import { get } from '../utils/request.js'
@@ -209,6 +209,7 @@ const loadPets = async () => {
  * 组件挂载时执行：初始化加载宠物列表
  */
 onMounted(() => {
+  console.log('PetList onMounted')
   // 从路由参数恢复分页状态
   if (route.query.page) {
     currentPage.value = parseInt(route.query.page)
@@ -217,6 +218,68 @@ onMounted(() => {
     pageSize.value = parseInt(route.query.size)
   }
   loadPets()
+})
+
+/**
+ * 组件从缓存激活时触发（从详情页返回时会调用）
+ */
+onActivated(() => {
+  console.log('PetList onActivated')
+
+  // 1. 立即恢复滚动位置（在数据加载前执行，利用 keep-alive 保存的旧 DOM）
+  const savedScrollY = sessionStorage.getItem('petListScrollPosition')
+  if (savedScrollY && parseInt(savedScrollY) > 0) {
+    const scrollY = parseInt(savedScrollY)
+    console.log('Immediately restoring scroll to:', scrollY)
+
+    // 同步执行滚动，确保瞬间恢复
+    window.scrollTo(0, scrollY)
+    document.documentElement.scrollTop = scrollY
+    document.body.scrollTop = scrollY
+  }
+
+  // 2. 恢复分页参数
+  if (route.query.page) {
+    const newPage = parseInt(route.query.page)
+    if (newPage !== currentPage.value) {
+      currentPage.value = newPage
+    }
+  }
+  if (route.query.size) {
+    const newSize = parseInt(route.query.size)
+    if (newSize !== pageSize.value) {
+      pageSize.value = newSize
+    }
+  }
+
+  // 3. 后台异步重新加载数据（此时滚动已经恢复，不会导致闪烁）
+  loadPets().then(() => {
+    const savedScrollY = sessionStorage.getItem('petListScrollPosition')
+    console.log('Saved scroll position from sessionStorage:', savedScrollY)
+
+    if (savedScrollY && parseInt(savedScrollY) > 0) {
+      sessionStorage.removeItem('petListScrollPosition')
+
+      nextTick(() => {
+        setTimeout(() => {
+          const scrollY = parseInt(savedScrollY)
+          console.log('Restoring scroll to:', scrollY)
+
+          // 使用多种方式确保滚动生效
+          window.scrollTo(0, scrollY)
+
+          // 同时设置 documentElement 和 body
+          document.documentElement.scrollTop = scrollY
+          document.body.scrollTop = scrollY
+
+          console.log('After scroll - window.scrollY:', window.scrollY)
+          console.log('After scroll - document.documentElement.scrollTop:', document.documentElement.scrollTop)
+        }, 500)
+      })
+    } else {
+      console.log('No valid scroll position to restore (value:', savedScrollY, ')')
+    }
+  })
 })
 
 /**
@@ -249,6 +312,16 @@ const handleCurrentChange = (newPage) => {
  * 跳转到宠物详情页面，携带当前分页参数
  */
 const showDetail = (pet) => {
+  // 使用多种方式获取滚动位置，确保准确
+  const currentScrollY = window.pageYOffset ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0
+
+  sessionStorage.setItem('petListScrollPosition', currentScrollY.toString())
+  console.log('Saved list scroll position:', currentScrollY)
+  console.log('Current URL:', window.location.href)
+
   router.push({
     path: `/pet/${pet.id}`,
     query: {

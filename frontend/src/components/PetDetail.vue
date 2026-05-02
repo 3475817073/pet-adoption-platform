@@ -193,7 +193,22 @@ const nextPhoto = () => {
 
 // 返回上一页，保持分页状态
 const goBack = () => {
-  router.back()
+  // 获取当前滚动位置（详情页的）
+  const currentScrollY = window.scrollY || document.documentElement.scrollTop
+  console.log('Saving detail page scroll:', currentScrollY)
+
+  // 但我们需要的是列表页的滚动位置，这个位置应该在点击卡片时就保存了
+  // 获取详情页URL中的分页参数
+  const page = route.query.page || 1
+  const size = route.query.size || 12
+
+  console.log('Navigating back to pets list with page:', page, 'size:', size)
+
+  // 跳转到宠物列表页，携带分页参数
+  router.push({
+    path: '/pets',
+    query: { page, size }
+  })
 }
 
 
