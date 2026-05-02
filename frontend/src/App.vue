@@ -5,8 +5,8 @@
       <div class="navbar-content">
         <!-- Logo -->
         <div class="navbar-logo" @click="router.push('/pets')">
-          <span class="logo-icon">🐱</span>
-          <span class="logo-text">宠物领养平台</span>
+          <img src="@/assets/top-icon.png" alt="宠物平台图标" class="logo-icon" />
+          <span class="logo-text">宠物领养与互助服务平台</span>
         </div>
 
         <!-- 导航菜单 -->
@@ -16,7 +16,7 @@
             <span>宠物列表</span>
           </router-link>
           <router-link to="/publish" class="nav-item" :class="{ active: route.path === '/publish' }">
-            <span class="nav-icon"></span>
+            <span class="nav-icon">📤</span>
             <span>宠物发布</span>
           </router-link>
           <router-link to="/help" class="nav-item" :class="{ active: route.path === '/help' }">
@@ -134,7 +134,7 @@ const showLoginDialog = () => {
 </script>
 
 
-<style>
+<<style>
 /* ===== 全局重置 ===== */
 * {
   margin: 0;
@@ -157,6 +157,55 @@ html, body {
   min-height: 100vh;
   background: #f9fafb;
   width: 100%;
+}
+
+/* ===== 自定义消息提示框样式 ===== */
+.custom-message {
+  border-radius: 16px !important;
+  padding: 16px 20px !important;
+  border: 2px solid !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  min-width: 320px !important;
+}
+
+.success-message {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #065f46 !important;
+}
+
+.warning-message {
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+  color: #92400e !important;
+}
+
+.error-message {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #991b1b !important;
+}
+
+.info-message {
+  background: rgba(59, 130, 246, 0.08) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  color: #1e40af !important;
+}
+
+.custom-message .el-message__content {
+  line-height: 1.6 !important;
+}
+
+.custom-message .el-message__closeBtn {
+  font-size: 18px !important;
+  opacity: 0.6 !important;
+  transition: opacity 0.2s !important;
+}
+
+.custom-message .el-message__closeBtn:hover {
+  opacity: 1 !important;
 }
 
 /* ===== 顶部导航栏 ===== */
@@ -196,8 +245,9 @@ html, body {
 }
 
 .logo-icon {
-  font-size: 36px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
 }
 
 .logo-text {
@@ -355,4 +405,5 @@ html, body {
     display: none;
   }
 }
+
 </style>

@@ -211,9 +211,9 @@
  * 提供宠物信息录入、图片上传及发布功能
  */
 import { ref } from 'vue'
-import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
 import Login from './Login.vue'
+import { success, warning, error } from '../utils/message.js'
 
 const emit = defineEmits(['needLogin'])
 
@@ -240,7 +240,7 @@ const showLoginDialog = ref(false)
  */
 const handleStartPublish = () => {
   if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能发布宠物')
+    warning('请先登录才能发布宠物')
     showLoginDialog.value = true
     return
   }
@@ -278,11 +278,11 @@ const beforeUpload = (file) => {
   const isLt5M = file.size / 1024 / 1024 < 5
 
   if (!isImage) {
-    ElMessage.error('只能上传图片文件')
+    error('只能上传图片文件')
     return false
   }
   if (!isLt5M) {
-    ElMessage.error('图片大小不能超过5MB')
+    error('图片大小不能超过5MB')
     return false
   }
   return true
@@ -294,7 +294,7 @@ const beforeUpload = (file) => {
 const handleUploadSuccess = (response, file, fileList) => {
   if (response.url) {
     uploadedUrls.value.push(response.url)
-    ElMessage.success('图片上传成功')
+    success('图片上传成功')
   }
 }
 
@@ -302,7 +302,7 @@ const handleUploadSuccess = (response, file, fileList) => {
  * 图片上传失败回调
  */
 const handleUploadError = () => {
-  ElMessage.error('图片上传失败')
+  error('图片上传失败')
 }
 
 /**
@@ -311,7 +311,7 @@ const handleUploadError = () => {
  */
 const publishPet = async () => {
   if (!form.value.name || !form.value.type || !form.value.description) {
-    ElMessage.warning('请填写完整信息')
+    warning('请填写完整信息')
     return
   }
 
@@ -336,7 +336,7 @@ const publishPet = async () => {
 
   try {
     await post('/api/pet/publish', data)
-    ElMessage.success('宠物发布成功！请等待管理员审核')
+    success('宠物发布成功！请等待管理员审核')
 
     form.value = {
       name: '',
@@ -354,8 +354,8 @@ const publishPet = async () => {
 
     showForm.value = false
 
-  } catch (error) {
-    ElMessage.error(error.message)
+  } catch (err) {
+    error(err.message)
   }
 }
 </script>

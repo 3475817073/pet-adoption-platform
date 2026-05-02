@@ -54,8 +54,8 @@
  * 展示用户提交的领养申请记录，支持状态查看与基础交互
  */
 import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
 import { get } from '../../utils/request'
+import { warning, error } from '../utils/message.js'
 
 const activeTab = ref('my')
 const myApplications = ref([])
@@ -113,8 +113,8 @@ const loadMyApplications = async () => {
   try {
     const data = await get('/api/adoption/my-applications', { username: currentUser.value.username })
     myApplications.value = data
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     loading.value = false
   }
@@ -127,10 +127,9 @@ const loadReceivedApplications = async () => {
   if (!currentUser.value || currentUser.value.role !== 'RESCUER') return
   loading.value = true
   try {
-    // 预留接口
     receivedApplications.value = []
   } catch {
-    ElMessage.error('加载失败')
+    error('加载失败')
   } finally {
     loading.value = false
   }
@@ -160,7 +159,7 @@ const goToPetList = () => {
 onMounted(() => {
   currentUser.value = getCurrentUser()
   if (!currentUser.value) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     return
   }
   loadData()

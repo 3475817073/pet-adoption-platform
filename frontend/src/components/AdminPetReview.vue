@@ -160,8 +160,9 @@
 
 <script setup>
 import {ref, onMounted, watch} from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { get, post } from '../utils/request.js'
+import { success, warning, error } from '../utils/message.js'
 
 const activeTab = ref('pending')
 const currentUser = ref(null)
@@ -226,8 +227,8 @@ const loadPending = async () => {
     })
     pendingList.value = data.content
     pendingTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     pendingLoading.value = false
   }
@@ -242,14 +243,13 @@ const loadApproved = async () => {
     })
     approvedList.value = data.content
     approvedTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     approvedLoading.value = false
   }
 }
 
-// 已拒绝列表
 const loadRejected = async () => {
   rejectedLoading.value = true
   try {
@@ -260,8 +260,8 @@ const loadRejected = async () => {
     })
     rejectedList.value = data.content
     rejectedTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     rejectedLoading.value = false
   }
@@ -283,12 +283,12 @@ const handleReview = async (pet, action) => {
     const user = getCurrentUser()
     const url = `/api/pet/review/${pet.id}?username=${user.username}&action=${action}`
     await post(url, null)
-    ElMessage.success(`已${actionText}该宠物`)
+    success(`已${actionText}该宠物`)
     loadPending()
     loadApproved()
     loadRejected()
-  } catch (error) {
-    ElMessage.error(error.message || '操作失败')
+  } catch (err) {
+    error(err.message || '操作失败')
   }
 }
 
@@ -330,7 +330,7 @@ const handleRejectedSizeChange = (size) => {
 onMounted(() => {
   currentUser.value = getCurrentUser()
   if (!currentUser.value) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     return
   }
   loadPending()

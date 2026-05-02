@@ -199,9 +199,10 @@
  * 提供帖子浏览、筛选、发布、详情查看、评论与回复、删除等完整交互功能
  */
 import {ref, onMounted, computed, nextTick, watch, inject} from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
 import { Delete } from '@element-plus/icons-vue'
+import { success, warning, error } from '../utils/message.js'
 
 const emit = defineEmits(['needLogin'])
 const triggerLogin = inject('triggerLogin')
@@ -363,7 +364,6 @@ onMounted(async () => {
 const loadPostsFromServer = async () => {
   loading.value = true
   try {
-    // 使用封装的 get 方法，自动处理 URL 和参数
     const data = await get('/api/help/list', {
       page: currentPage.value - 1,
       size: pageSize.value,
@@ -375,7 +375,6 @@ const loadPostsFromServer = async () => {
     const postsWithComments = await Promise.all(
         posts.value.map(async (post) => {
           try {
-            // 使用 get 方法请求评论
             const commentData = await get(`/api/help/comments/${post.id}`)
             post.commentCount = commentData.reduce((sum, c) => sum + 1 + (c.replies?.length || 0), 0)
           } catch (e) {
@@ -386,8 +385,8 @@ const loadPostsFromServer = async () => {
     )
 
     posts.value = postsWithComments
-  } catch (error) {
-    ElMessage.error(error.message || '加载帖子失败')
+  } catch (err) {
+    error(err.message || '加载帖子失败')
   } finally {
     loading.value = false
   }
@@ -427,7 +426,7 @@ const handleJumpPage = () => {
  */
 const showPublishDialog = () => {
   if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能发布互助帖')
+    warning('请先登录才能发布互助帖')
     triggerLogin()
     return
   }
@@ -435,12 +434,9 @@ const showPublishDialog = () => {
   publishVisible.value = true
 }
 
-/**
- * 提交新发布的互助帖到后端
- */
 const submitPost = async () => {
   if (!postForm.value.category || !postForm.value.title || !postForm.value.content) {
-    ElMessage.warning('请填写完整信息')
+    warning('请填写完整信息')
     return
   }
 
@@ -448,7 +444,6 @@ const submitPost = async () => {
   const user = getCurrentUser()
 
   try {
-    // 使用 post 方法，自动设置 headers 和 JSON 序列化
     await post('/api/help/publish', {
       username: user.username,
       title: postForm.value.title,
@@ -456,12 +451,12 @@ const submitPost = async () => {
       category: postForm.value.category
     })
 
-    ElMessage.success('帖子发布成功！请等待管理员审核')
+    success('帖子发布成功！请等待管理员审核')
     publishVisible.value = false
     postForm.value = { category: '', title: '', content: '' }
     await loadPostsFromServer()
-  } catch (error) {
-    ElMessage.error(error.message)
+  } catch (err) {
+    error(err.message)
   } finally {
     loading.value = false
   }
@@ -485,8 +480,8 @@ const loadComments = async (postId) => {
   try {
     const data = await get(`/api/help/comments/${postId}`)
     comments.value = data
-  } catch (error) {
-    ElMessage.error('加载评论失败')
+  } catch (err) {
+    error('加载评论失败')
     comments.value = []
   } finally {
     commentsLoading.value = false
@@ -499,12 +494,12 @@ const loadComments = async (postId) => {
  */
 const submitComment = async () => {
   if (!newComment.value.trim()) {
-    ElMessage.warning('请输入评论内容')
+    warning('请输入评论内容')
     return
   }
 
   if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能评论')
+    warning('请先登录才能评论')
     triggerLogin()
     return
   }
@@ -518,12 +513,12 @@ const submitComment = async () => {
       content: newComment.value
     })
 
-    ElMessage.success('评论成功')
+    success('评论成功')
     newComment.value = ''
     await loadComments(currentPost.value.id)
     await loadPostsFromServer()
-  } catch (error) {
-    ElMessage.error(error.message || '评论失败')
+  } catch (err) {
+    error(err.message || '评论失败')
   }
 }
 
@@ -533,12 +528,12 @@ const submitComment = async () => {
  */
 const submitReply = async (commentId, type) => {
   if (!replyText.value.trim()) {
-    ElMessage.warning('请输入回复内容')
+    warning('请输入回复内容')
     return
   }
 
   if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能回复')
+    warning('请先登录才能回复')
     triggerLogin()
     return
   }
@@ -553,14 +548,14 @@ const submitReply = async (commentId, type) => {
       parentId: commentId
     })
 
-    ElMessage.success('回复成功')
+    success('回复成功')
     replyText.value = ''
     replyBoxIndex.value = -1
     replyBoxReplyId.value = -1
     replyBoxType.value = ''
     await loadComments(currentPost.value.id)
-  } catch (error) {
-    ElMessage.error(error.message || '回复失败')
+  } catch (err) {
+    error(err.message || '回复失败')
   }
 }
 
@@ -671,13 +666,13 @@ const deleteComment = async (commentId) => {
       const user = getCurrentUser()
       await del(`/api/help/comment/${commentId}?username=${user.username}`)
 
-      ElMessage.success('删除成功')
+      success('删除成功')
       await loadComments(currentPost.value.id)
       await loadPostsFromServer()
     }).catch(() => {})
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(error.message || '删除失败')
+  } catch (err) {
+    if (err !== 'cancel') {
+      error(err.message || '删除失败')
     }
   }
 }
@@ -690,7 +685,7 @@ const currentUser = JSON.parse(localStorage.getItem('user'))
  */
 const handleDeletePost = async (post) => {
   if (!currentUser) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     return
   }
 
@@ -701,17 +696,17 @@ const handleDeletePost = async (post) => {
       type: 'warning',
     })
   } catch {
-    return // 用户点击了取消
+    return// 取消
   }
 
   try {
-    // 调用后端接口，传入帖子ID和当前用户名
+    //后端传入帖子ID和当前用户名
     await del(`/api/help/post/${post.id}`, { username: currentUser.username })
 
-    ElMessage.success('删除成功')
-    loadPostsFromServer() // 【修正】这里应该是 loadPostsFromServer()
-  } catch (error) {
-    ElMessage.error(error.message || '删除失败')
+    success('删除成功')
+    loadPostsFromServer()
+  } catch (err) {
+    error(err.message || '删除失败')
   }
 }
 </script>

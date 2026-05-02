@@ -133,8 +133,8 @@
 import { ref, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '../utils/request.js'
-import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
+import { warning, error } from '../utils/message.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -169,9 +169,9 @@ const loadPetDetail = async () => {
 
     pet.value = response
     currentPhotoIndex.value = 0
-  } catch (error) {
-    ElMessage.error('加载宠物详情失败')
-    console.error(error)
+  } catch (err) {
+    error('加载宠物详情失败')
+    console.error(err)
   } finally {
     loading.value = false
   }
@@ -201,7 +201,7 @@ const goBack = () => {
 const applyAdopt = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) {
-    ElMessage.warning('请先登录才能申请领养')
+    warning('请先登录才能申请领养')
     triggerLogin()
     return
   }

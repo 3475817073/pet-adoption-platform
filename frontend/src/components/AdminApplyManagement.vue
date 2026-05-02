@@ -288,8 +288,9 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
+import { success, warning, error } from '../utils/message.js'
 
 const activeTab = ref('pending')
 const pendingList = ref([])
@@ -347,8 +348,8 @@ const formatDate = (time) => {
 
 const getVisitTypeText = (type) => {
   const map = {
-    'PHONE': '📞 电话回访',
-    'ON_SITE': '🏠 上门回访',
+    'PHONE': ' 电话回访',
+    'ON_SITE': ' 上门回访',
     'ONLINE': '💬 在线回访'
   }
   return map[type] || type
@@ -367,7 +368,7 @@ const getPetStatusText = (status) => {
   const map = {
     'HEALTHY': '✅ 适应良好',
     'ADAPTING': '⚠️ 适应中',
-    'ISSUES': '❌ 存在问题'
+    'ISSUES': ' 存在问题'
   }
   return map[status] || status
 }
@@ -391,8 +392,8 @@ const loadPending = async () => {
     })
     pendingList.value = data.content
     pendingTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     pendingLoading.value = false
   }
@@ -408,8 +409,8 @@ const loadApproved = async () => {
     })
     approvedList.value = data.content
     approvedTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     approvedLoading.value = false
   }
@@ -425,8 +426,8 @@ const loadRejected = async () => {
     })
     rejectedList.value = data.content
     rejectedTotal.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '加载失败')
+  } catch (err) {
+    error(err.message || '加载失败')
   } finally {
     rejectedLoading.value = false
   }
@@ -475,12 +476,12 @@ const review = (applicationId, action) => {
     try {
       const url = `/api/adoption/review/${applicationId}?username=${currentUser.value.username}&action=${action}`
       await post(url, {})
-      ElMessage.success(`${text}成功`)
+      success(`${text}成功`)
       loadPending()
       loadApproved()
       loadRejected()
-    } catch (error) {
-      ElMessage.error(error.message || '操作失败')
+    } catch (err) {
+      error(err.message || '操作失败')
     }
   }).catch(() => {})
 }
@@ -504,15 +505,15 @@ const showVisitDialog = async (application) => {
         visitForm.value.nextVisitTime = lastVisit.nextVisitTime
       }
     }
-  } catch (error) {
-    console.error('加载回访历史失败', error)
+  } catch (err) {
+    console.error('加载回访历史失败', err)
   }
   visitDialogVisible.value = true
 }
 
 const submitVisitRecord = async () => {
   if (!visitForm.value.visitTime || !visitForm.value.petStatus) {
-    ElMessage.warning('请填写必填项')
+    warning('请填写必填项')
     return
   }
   submitting.value = true
@@ -528,11 +529,11 @@ const submitVisitRecord = async () => {
       needFollowUp: visitForm.value.needFollowUp,
       nextVisitTime: visitForm.value.nextVisitTime
     })
-    ElMessage.success('回访记录添加成功')
+    success('回访记录添加成功')
     visitDialogVisible.value = false
     loadApproved()
-  } catch (error) {
-    ElMessage.error(error.message || '添加失败')
+  } catch (err) {
+    error(err.message || '添加失败')
   } finally {
     submitting.value = false
   }
@@ -543,8 +544,8 @@ const viewVisitHistory = async (application) => {
   try {
     visitHistory.value = await get(`/api/visit/list/${application.id}`)
     historyDialogVisible.value = true
-  } catch (error) {
-    ElMessage.error(error.message || '加载回访历史失败')
+  } catch (err) {
+    error(err.message || '加载回访历史失败')
   }
 }
 
@@ -556,12 +557,12 @@ const deleteVisitRecord = (visitId) => {
   }).then(async () => {
     try {
       await del(`/api/visit/${visitId}`, { username: currentUser.value.username })
-      ElMessage.success('删除成功')
+      success('删除成功')
       if (currentApplication.value) {
         viewVisitHistory(currentApplication.value)
       }
-    } catch (error) {
-      ElMessage.error(error.message || '删除失败')
+    } catch (err) {
+      error(err.message || '删除失败')
     }
   }).catch(() => {})
 }
@@ -569,7 +570,7 @@ const deleteVisitRecord = (visitId) => {
 onMounted(() => {
   currentUser.value = getCurrentUser()
   if (!currentUser.value || currentUser.value.role !== 'ADMIN') {
-    ElMessage.error('无权限访问，请使用管理员账号登录')
+    error('无权限访问，请使用管理员账号登录')
     return
   }
   loadPending()
@@ -583,6 +584,7 @@ watch(activeTab, (newTab) => {
   else loadRejected()
 })
 </script>
+
 
 <style scoped>
 .pagination-wrapper {

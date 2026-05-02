@@ -173,8 +173,9 @@
  * 展示用户基本信息、已发布宠物列表、领养申请记录，支持宠物编辑与删除操作
  */
 import { ref, onMounted, inject } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import { get, put, del } from '../utils/request.js'
+import { success, warning, error } from '../utils/message.js'
 
 const triggerLogin = inject('triggerLogin')
 
@@ -278,7 +279,7 @@ const getPetImageUrl = (pet) => {
 const loadUserData = async () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     triggerLogin()
     return
   }
@@ -305,8 +306,8 @@ const loadUserData = async () => {
     myApplications.value = appsData.content
     appsTotal.value = appsData.totalElements
 
-  } catch (error) {
-    ElMessage.error(error.message || '加载数据失败')
+  } catch (err) {
+    error(err.message || '加载数据失败')
   }
 }
 
@@ -366,14 +367,14 @@ const editPet = (pet) => {
  */
 const saveEdit = async () => {
   if (!editForm.value.name || !editForm.value.type || !editForm.value.description) {
-    ElMessage.warning('请填写完整信息')
+    warning('请填写完整信息')
     return
   }
 
   saving.value = true
   const userStr = localStorage.getItem('user')
   if (!userStr) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     saving.value = false
     triggerLogin()
     return
@@ -391,11 +392,11 @@ const saveEdit = async () => {
       description: editForm.value.description
     })
 
-    ElMessage.success('修改成功')
+    success('修改成功')
     editDialogVisible.value = false
     await loadUserData()
-  } catch (error) {
-    ElMessage.error(error.message || '修改失败')
+  } catch (err) {
+    error(err.message || '修改失败')
   } finally {
     saving.value = false
   }
@@ -414,7 +415,7 @@ const deletePet = (petId) => {
   }).then(async () => {
     const userStr = localStorage.getItem('user')
     if (!userStr) {
-      ElMessage.warning('请先登录')
+      warning('请先登录')
       triggerLogin()
       return
     }
@@ -423,10 +424,10 @@ const deletePet = (petId) => {
 
     try {
       await del(`/api/pet/${petId}`, { username: user.username })
-      ElMessage.success('删除成功')
+      success('删除成功')
       await loadUserData()
-    } catch (error) {
-      ElMessage.error(error.message || '删除失败')
+    } catch (err) {
+      error(err.message || '删除失败')
     }
   }).catch(() => {})
 }

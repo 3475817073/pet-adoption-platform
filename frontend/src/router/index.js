@@ -59,11 +59,9 @@ const router = createRouter({
     history: createWebHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
-        // 如果是从详情页返回列表页，且有保存的位置，则恢复
         if (savedPosition) {
             return savedPosition
         }
-        // 其他情况滚动到顶部
         return { top: 0 }
     }
 })

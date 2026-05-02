@@ -86,8 +86,8 @@
 
 <script setup>
 import { ref, defineProps, defineEmits, watch, inject } from 'vue'
-import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
+import { success, warning, error } from '../utils/message.js'
 
 const props = defineProps({ pet: Object })
 const emit = defineEmits(['close', 'success'])
@@ -109,13 +109,13 @@ const form = ref({
 
 const submitApply = async () => {
   if (!form.value.reason.trim() || !form.value.contact.trim() || !form.value.residenceType || !form.value.petExperience) {
-    ElMessage.warning('请填写完整的领养信息')
+    warning('请填写完整的领养信息')
     return
   }
 
   const userStr = localStorage.getItem('user')
   if (!userStr) {
-    ElMessage.warning('请先登录')
+    warning('请先登录')
     visible.value = false
     triggerLogin()
     return
@@ -125,7 +125,7 @@ const submitApply = async () => {
   try {
     user = JSON.parse(userStr)
   } catch {
-    ElMessage.error('用户信息错误')
+    error('用户信息错误')
     return
   }
 
@@ -144,11 +144,11 @@ const submitApply = async () => {
       otherPetsInfo: form.value.otherPetsInfo
     })
 
-    ElMessage.success('申请提交成功！请等待管理员审核')
+    success('申请提交成功！请等待管理员审核')
     emit('success')
     visible.value = false
-  } catch (error) {
-    ElMessage.error(error.message)
+  } catch (err) {
+    error(err.message)
   } finally {
     loading.value = false
   }

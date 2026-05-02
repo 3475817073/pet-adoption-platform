@@ -132,8 +132,8 @@
  * 提供用户登录和注册功能，支持表单校验与后端 API 交互
  */
 import { ref, defineProps, defineEmits, computed } from 'vue'
-import { ElMessage } from 'element-plus'
 import { post } from '../utils/request.js'
+import { success, warning, error } from '../utils/message.js'
 
 const props = defineProps({ modelValue: Boolean })
 const emit = defineEmits(['update:modelValue', 'loginSuccess'])
@@ -170,7 +170,7 @@ const handleClose = () => {
  */
 const doLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
-    ElMessage.warning('请填写用户名和密码')
+    warning('请填写用户名和密码')
     return
   }
 
@@ -178,13 +178,13 @@ const doLogin = async () => {
   try {
     const data = await post('/api/user/login', loginForm.value)
 
-    ElMessage.success('登录成功！')
+    success('登录成功！')
     emit('loginSuccess', data)
     emit('update:modelValue', false)
     loginForm.value = { username: '', password: '' }
 
-  } catch (error) {
-    ElMessage.error(error.message)
+  } catch (err) {
+    error(err.message)
   } finally {
     loginLoading.value = false
   }
@@ -195,27 +195,26 @@ const doLogin = async () => {
  */
 const doRegister = async () => {
   if (!registerForm.value.username || !registerForm.value.password || !registerForm.value.realName) {
-    ElMessage.warning('请填写必填项')
+    warning('请填写必填项')
     return
   }
 
   if (registerForm.value.password !== registerForm.value.confirmPassword) {
-    ElMessage.warning('两次输入的密码不一致')
+    warning('两次输入的密码不一致')
     return
   }
 
   if (registerForm.value.password.length < 6) {
-    ElMessage.warning('密码长度至少6位')
+    warning('密码长度至少6位')
     return
   }
 
   registerLoading.value = true
   try {
-    //使用解构赋值剔除 confirmPassword，避免提交给后端
     const { confirmPassword, ...submitData } = registerForm.value
     await post('/api/user/register', submitData)
 
-    ElMessage.success('注册成功！')
+    success('注册成功！')
     registerForm.value = {
       username: '',
       password: '',
@@ -225,9 +224,9 @@ const doRegister = async () => {
     }
     tab.value = 'login'
 
-  } catch (error) {
-    console.error("注册失败详情:", error)
-    ElMessage.error(error.message || '注册失败，请检查输入或联系管理员')
+  } catch (err) {
+    console.error("注册失败详情:", err)
+    error(err.message || '注册失败，请检查输入或联系管理员')
   } finally {
     registerLoading.value = false
   }

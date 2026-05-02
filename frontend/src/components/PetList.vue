@@ -74,7 +74,7 @@
     <!-- 宠物卡片：展示宠物图片、基本信息及操作按钮 -->
     <el-row :gutter="20" class="pet-grid">
       <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" class="pet-grid-item">
-        <el-card class="pet-card" shadow="never">
+        <el-card class="pet-card" shadow="never" :body-style="{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }">
           <div class="image-container" @click="showDetail(pet)">
             <img v-if="getPetImageUrl(pet)" :src="getPetImageUrl(pet)" class="pet-image" />
             <div v-else class="no-image"></div>
@@ -89,17 +89,20 @@
             </div>
           </div>
 
+          <!-- 卡片信息区 -->
           <div class="pet-info">
             <h3 class="pet-name" @click="showDetail(pet)">
               {{ pet.name }}
               <span class="pet-detail">（{{ pet.gender }} · {{ pet.age }}岁）</span>
             </h3>
 
-            <!-- 新增：列表页标签预览 -->
-            <div v-if="pet.tags" class="card-tags">
-              <span v-for="(tag, i) in JSON.parse(pet.tags).slice(0, 2)" :key="i" class="mini-tag">
-                {{ tag }}
-              </span>
+            <!-- 标签预览（即使没有标签也占位） -->
+            <div class="card-tags">
+              <template v-if="pet.tags">
+                <span v-for="(tag, i) in JSON.parse(pet.tags).slice(0, 2)" :key="i" class="mini-tag">
+                  {{ tag }}
+                </span>
+              </template>
             </div>
 
             <p class="description">{{ pet.description }}</p>
@@ -116,7 +119,7 @@
       <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[6, 12, 24, 48]"
+          :page-sizes="[8, 16, 24, 32]"
           :total="total"
           layout="total, prev, pager, next, sizes, jumper"
           :pager-count="7"
@@ -144,19 +147,20 @@
 }
 </script>
 
-<script setup>/**
+<script setup>
+/**
  * 宠物列表页面组件
  * 提供宠物浏览、多条件筛选、分页查看、详情预览及领养申请功能
  */
-import { ref, onMounted, onActivated, watch, onUnmounted } from 'vue'
+import { ref, onMounted, watch, inject } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import AdoptionApply from './AdoptionApply.vue'
 import { get } from '../utils/request.js'
+import { success, warning, error, info } from '../utils/message.js'
 
 const router = useRouter()
 const route = useRoute()
-const emit = defineEmits(['needLogin'])
+const triggerLogin = inject('triggerLogin')
 
 const pets = ref([])
 const searchKeyword = ref('')
@@ -173,10 +177,7 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 /** 总记录数 */
 const total = ref(0)
-const jumpPage = ref(1)
 
-/** 保存滚动位置 */
-let savedScrollTop = 0
 
 /**
  * 从后端加载宠物列表数据，支持分页与多条件筛选
@@ -197,8 +198,8 @@ const loadPets = async () => {
     const data = await get('/api/pet/list', params)
     pets.value = data.content
     total.value = data.totalElements
-  } catch (error) {
-    ElMessage.error(error.message || '获取宠物列表失败')
+  } catch (err) {
+    error(err.message || '获取宠物列表失败')
   } finally {
     loading.value = false
   }
@@ -216,22 +217,6 @@ onMounted(() => {
     pageSize.value = parseInt(route.query.size)
   }
   loadPets()
-})
-
-/**
- * 组件激活时执行：恢复滚动位置（keep-alive 缓存后重新显示）
- */
-onActivated(() => {
-  if (savedScrollTop > 0) {
-    window.scrollTo(0, savedScrollTop)
-  }
-})
-
-/**
- * 组件卸载前：保存当前滚动位置
- */
-onUnmounted(() => {
-  savedScrollTop = window.scrollY || window.pageYOffset
 })
 
 /**
@@ -259,22 +244,11 @@ const handleCurrentChange = (newPage) => {
   loadPets()
 }
 
-/**
- * 处理跳转页码输入，校验范围后执行跳转
- */
-const handleJumpPage = () => {
-  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= Math.ceil(total.value / pageSize.value)) {
-    currentPage.value = jumpPage.value
-    loadPets()
-  }
-}
-
 
 /**
  * 跳转到宠物详情页面，携带当前分页参数
  */
 const showDetail = (pet) => {
-  savedScrollTop = window.scrollY || window.pageYOffset
   router.push({
     path: `/pet/${pet.id}`,
     query: {
@@ -317,7 +291,7 @@ const getSafeTags = (tagsStr) => {
     return Array.isArray(parsed) ? parsed : []
   } catch (e) {
     console.warn('标签格式解析失败:', tagsStr)
-    return [] // 如果解析失败，返回空数组，保证页面不崩
+    return []
   }
 }
 
@@ -329,12 +303,12 @@ const getSafeTags = (tagsStr) => {
  */
 const applyAdopt = (pet) => {
   if (!localStorage.getItem('user')) {
-    ElMessage.warning('请先登录才能申请领养')
-    emit('needLogin')
+    warning('请先登录才能申请领养')
+    triggerLogin()
     return
   }
   if (pet.status === 'ADOPTED') {
-    ElMessage.info('这只宠物已经被领养啦~')
+    info('这只宠物已经被领养啦~')
     return
   }
   currentApplyPet.value = pet
@@ -365,7 +339,7 @@ const filterByType = (type) => {
  * 领养申请成功回调
  */
 const onApplySuccess = () => {
-  ElMessage.success('领养申请已提交！请等待管理员审核')
+  success('领养申请已提交！请等待管理员审核')
 }
 
 </script>
@@ -643,17 +617,16 @@ const onApplySuccess = () => {
 
 .pet-card:hover .view-btn { transform: translateY(0); }
 
-/* ===== 卡片信息区 ===== */
+/* ===== 卡片信息区 - 固定高度确保按钮对齐 ===== */
 .pet-info {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 180px;
+  height: 220px;
 }
 
 .pet-name {
-  margin: 0 0 12px 0;
+  margin: 0 0 8px 0;
   font-size: 22px;
   color: #111827;
   cursor: pointer;
@@ -661,6 +634,7 @@ const onApplySuccess = () => {
   letter-spacing: -0.3px;
   line-height: 1.3;
   transition: color 0.2s ease;
+  min-height: 32px;
 }
 
 .pet-name:hover {
@@ -673,8 +647,27 @@ const onApplySuccess = () => {
   font-weight: 400;
 }
 
+/* 卡片内标签预览 - 固定高度占位 */
+.card-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  height: 28px;
+  align-items: center;
+}
+
+.mini-tag {
+  font-size: 12px;
+  color: #be185d;
+  background: rgba(236, 72, 153, 0.1);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+/* 描述文本 - 固定高度 */
 .description {
-  margin: 16px 0;
+  margin: 0 0 16px 0;
   color: #4b5563;
   line-height: 1.6;
   display: -webkit-box;
@@ -682,10 +675,11 @@ const onApplySuccess = () => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   font-size: 14px;
-  min-height: 44px;
+  height: 44px;
+  flex-shrink: 0;
 }
 
-/* ===== 我要领养按钮 - 全宽深珊瑚色 ===== */
+/* ===== 我要领养按钮 - 自动推到底部 ===== */
 .adopt-btn {
   width: 100%;
   margin-top: auto;
@@ -700,6 +694,7 @@ const onApplySuccess = () => {
   position: relative;
   overflow: hidden;
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .adopt-btn::before {
