@@ -316,4 +316,26 @@ public class HelpPostController {
             return ResponseEntity.badRequest().body("审核失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 根据宠物类型查询相关帖子（用于宠物详情页显示讨论）
+     */
+    @GetMapping("/by-pet-type/{type}")
+    public ResponseEntity<Page<HelpPost>> getPostsByPetType(
+            @PathVariable String type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "3") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+        return ResponseEntity.ok(helpPostService.findApprovedByType(type, pageable));
+    }
+
+    /**
+     * 获取单个帖子详情（含关联宠物信息）
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<HelpPost> getPostDetail(@PathVariable Long id) {
+        HelpPost post = helpPostService.findById(id);
+        return post != null ? ResponseEntity.ok(post) : ResponseEntity.notFound().build();
+    }
 }
+

@@ -26,4 +26,8 @@ public class HelpPost {
     private PostStatus status = PostStatus.PENDING;
 
     private LocalDateTime createTime = LocalDateTime.now();//创建时间
+
+    @ManyToOne
+    @JoinColumn(name = "related_pet_id")
+    private Pet relatedPet; // 可选：关联的宠物
 }

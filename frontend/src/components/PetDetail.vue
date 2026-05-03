@@ -66,7 +66,7 @@
 
         <!-- 身份块 -->
         <div class="info-block identity-block">
-          <h3 class="block-title">📝 档案摘要</h3>
+          <h3 class="block-title"> 档案摘要</h3>
           <div class="info-grid">
             <div class="info-item">
               <span class="label">品种</span>
@@ -116,8 +116,58 @@
       </div>
     </div>
 
+    <!-- 社区讨论板块（全宽底部） -->
+    <div v-if="pet" class="discussion-section-full">
+      <div class="discussion-header">
+        <h3 class="discussion-title">💬 关于此{{ pet.type }}的社区讨论</h3>
+        <el-button type="primary" text @click="goToHelpPostWithFilter" class="view-more-btn">
+          查看更多 →
+        </el-button>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="relatedPostsLoading" class="discussion-loading">
+        <el-skeleton :rows="3" animated />
+      </div>
+
+      <!-- 相关帖子列表 -->
+      <div v-else-if="relatedPosts.length > 0" class="related-posts-grid">
+        <div
+            v-for="post in relatedPosts"
+            :key="post.id"
+            class="related-post-card"
+            @click="goToPostDetail(post)"
+        >
+          <div class="post-card-header">
+            <el-tag size="small" :type="getPostCategoryType(post.category)" class="post-category-tag">
+              {{ post.category }}
+            </el-tag>
+            <span class="post-card-time">{{ formatRelativeTime(post.createTime) }}</span>
+          </div>
+          <h4 class="post-card-title">{{ post.title }}</h4>
+          <p class="post-card-preview">{{ truncateContent(post.content, 100) }}</p>
+          <div class="post-card-footer">
+            <span class="post-card-author">👤 {{ post.user?.username || '匿名' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 空状态 -->
+      <el-empty
+          v-else
+          description="暂无相关讨论"
+          :image-size="120"
+          class="discussion-empty"
+      >
+        <el-button type="primary" @click="publishRelatedPost" style="background: #cc785c; border-color: #cc785c; border-radius: 12px; margin-top: 16px">
+          发布第一条关于此{{ pet.type }}的讨论
+        </el-button>
+      </el-empty>
+    </div>
+
     <!-- 未找到宠物 -->
     <el-empty v-else description="未找到该宠物信息" :image-size="200" />
+
 
     <!-- 领养申请弹窗：复用 AdoptionApply 组件 -->
     <AdoptionApply
@@ -129,8 +179,7 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted, inject } from 'vue'
+<script setup>import { ref, onMounted, inject } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '../utils/request.js'
 import AdoptionApply from './AdoptionApply.vue'
@@ -146,6 +195,8 @@ const loading = ref(true)
 const currentPhotoIndex = ref(0)
 const applyDialogVisible = ref(false)
 
+const relatedPosts = ref([])
+const relatedPostsLoading = ref(false)
 
 
 // 加载宠物详情
@@ -169,11 +220,30 @@ const loadPetDetail = async () => {
 
     pet.value = response
     currentPhotoIndex.value = 0
+
+    // 加载相关讨论
+    await loadRelatedPosts()
   } catch (err) {
     error('加载宠物详情失败')
     console.error(err)
   } finally {
     loading.value = false
+  }
+}
+
+// 加载相关讨论帖子
+const loadRelatedPosts = async () => {
+  if (!pet.value || !pet.value.type) return
+
+  relatedPostsLoading.value = true
+  try {
+    const data = await get(`/api/pet/${route.params.id}/related-posts`)
+    relatedPosts.value = data
+  } catch (err) {
+    console.error('加载相关讨论失败:', err)
+    relatedPosts.value = []
+  } finally {
+    relatedPostsLoading.value = false
   }
 }
 
@@ -225,6 +295,80 @@ const applyAdopt = () => {
 
 const onApplySuccess = () => {
   //ElMessage.success('领养申请已提交！请等待管理员审核')
+}
+
+// 跳转到互助交流页并筛选该宠物类型
+const goToHelpPostWithFilter = () => {
+  router.push({
+    path: '/help',
+    query: {
+      category: pet.value.type,
+      page: 1,
+      size: 10
+    }
+  })
+}
+
+// 跳转到帖子详情页
+const goToPostDetail = (post) => {
+  router.push({
+    path: `/post/${post.id}`,
+    query: { page: 1, size: 10 }
+  })
+}
+
+// 发布相关讨论
+const publishRelatedPost = () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    warning('请先登录才能发布讨论')
+    triggerLogin()
+    return
+  }
+
+  // 跳转到互助交流页
+  router.push({
+    path: '/help'
+  })
+}
+
+// 获取帖子分类标签类型
+const getPostCategoryType = (category) => {
+  const typeMap = {
+    '物资共享': '',
+    '医疗咨询': 'warning',
+    '经验分享': 'info'
+  }
+  return typeMap[category] || ''
+}
+
+// 格式化相对时间
+const formatRelativeTime = (dateTime) => {
+  if (!dateTime) return ''
+  const now = new Date()
+  const postTime = new Date(dateTime)
+  const diffMs = now - postTime
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffDays = Math.floor(diffHours / 24)
+
+  if (diffHours < 1) {
+    return '刚刚'
+  } else if (diffHours < 24) {
+    return `${diffHours}小时前`
+  } else if (diffDays < 7) {
+    return `${diffDays}天前`
+  } else {
+    const month = String(postTime.getMonth() + 1).padStart(2, '0')
+    const day = String(postTime.getDate()).padStart(2, '0')
+    return `${month}-${day}`
+  }
+}
+
+// 截断内容
+const truncateContent = (content, maxLength) => {
+  if (!content) return ''
+  if (content.length <= maxLength) return content
+  return content.substring(0, maxLength) + '...'
 }
 
 
@@ -649,5 +793,146 @@ onMounted(() => {
   }
   .profile-main-img { height: 250px; }
   .pet-detail-page { padding: 20px; }
+}
+
+/* 社区讨论板块（全宽底部） */
+.discussion-section-full {
+  margin-top: 40px;
+  background: #fff;
+  border: 2px solid #1f2937;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 8px 8px 0px #1f2937;
+}
+
+.discussion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #f3f4f6;
+}
+
+.discussion-title {
+  font-size: 22px;
+  font-weight: 900;
+  margin: 0;
+  color: #111827;
+  letter-spacing: -0.3px;
+}
+
+.view-more-btn {
+  font-weight: 700;
+  font-size: 15px;
+  color: #cc785c;
+}
+
+.view-more-btn:hover {
+  color: #a9583e;
+}
+
+.discussion-loading {
+  padding: 20px 0;
+}
+
+/* 帖子网格布局 */
+.related-posts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.related-post-card {
+  padding: 20px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.related-post-card:hover {
+  border-color: #cc785c;
+  background: #fef3f2;
+  transform: translateY(-4px);
+  box-shadow: 6px 6px 0px #1f2937;
+}
+
+.post-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.post-category-tag {
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+}
+
+.post-card-time {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.post-card-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 10px 0;
+  line-height: 1.4;
+  min-height: 48px;
+}
+
+.post-card-preview {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin: 0 0 16px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.post-card-footer {
+  display: flex;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 2px solid #e5e7eb;
+}
+
+.post-card-author {
+  font-size: 13px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+.discussion-empty {
+  padding: 32px 0;
+}
+
+/* 响应式：讨论区网格 */
+@media (max-width: 900px) {
+  .related-posts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .discussion-section-full {
+    padding: 20px;
+  }
+
+  .discussion-title {
+    font-size: 18px;
+  }
 }
 </style>

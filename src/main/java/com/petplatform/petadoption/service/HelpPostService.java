@@ -80,4 +80,13 @@ public class HelpPostService {
     public Page<HelpPost> findRejectedPage(Pageable pageable) {
         return helpPostRepository.findByStatus(PostStatus.REJECTED, pageable);
     }
+
+    /**
+     * 分页查询审核通过且与指定宠物类型相关的帖子
+     * 用于在宠物详情页展示相关讨论
+     */
+    public Page<HelpPost> findApprovedByType(String petType, Pageable pageable) {
+        return helpPostRepository.findApprovedByPetType(petType, PostStatus.APPROVED, pageable);
+    }
 }
+

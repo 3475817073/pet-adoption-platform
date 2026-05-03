@@ -37,7 +37,7 @@
     <!-- 卡片式帖子列表 -->
     <el-row :gutter="20">
       <el-col v-for="post in filteredPosts" :key="post.id" :xs="24" :sm="12" :md="8" style="margin-bottom: 20px">
-        <el-card class="post-card" shadow="never" @click="showDetail(post)">
+        <el-card class="post-card" shadow="never" @click="goToPostDetail(post)">
           <div class="post-header">
             <el-tag :type="getCategoryType(post.category)" size="small" class="category-tag">{{ post.category }}</el-tag>
             <span class="post-time">{{ formatDateTime(post.createTime) }}</span>
@@ -88,87 +88,7 @@
       </template>
     </el-dialog>
 
-    <!-- 帖子详情弹窗 -->
-    <el-dialog v-model="detailVisible" :title="currentPost.title" width="750px">
-      <div style="margin-bottom: 20px">
-        <el-tag :type="getCategoryType(currentPost.category)" style="margin-right: 10px" class="category-tag">{{ currentPost.category }}</el-tag>
-        <span style="color: #6B7280; font-size: 14px">发布者：{{ currentPost.user?.username || currentPost.author }}</span>
-        <span style="color: #6B7280; font-size: 14px; margin-left: 15px">发布时间：{{ formatDateTime(currentPost.createTime) }}</span>
-      </div>
 
-      <p style="white-space: pre-wrap; font-size: 16px; margin-bottom: 30px; line-height: 1.8; color: #3D405B">
-        {{ currentPost.content }}
-      </p>
-
-      <h4>💬 评论区（{{ totalComments }}条）</h4>
-
-      <el-alert v-if="!isLoggedIn" title="请先登录后再参与评论" type="warning" :closable="false" style="margin-bottom: 15px; background: #FFF9E6; border-color: #F2CC8F">
-        <template #default>
-          登录后可发布评论和互助帖
-          <el-button type="primary" size="small" @click="triggerLogin" style="margin-left: 10px; background: #E07A5F; border-color: #E07A5F">去登录</el-button>
-        </template>
-      </el-alert>
-
-      <div class="comments-container" v-loading="commentsLoading">
-        <div v-for="(comment, index) in comments" :key="'comment-' + comment.id" class="main-comment">
-          <div class="comment-header">
-            <strong class="comment-user">{{ comment.user }}</strong>
-            <span class="comment-time">{{ formatCommentTime(comment.createTime) }}</span>
-          </div>
-          <div class="comment-content">{{ comment.content }}</div>
-
-          <div class="comment-actions">
-            <el-button v-if="isLoggedIn" type="primary" size="small" text @click="showMainReplyBox(comment)">回复</el-button>
-            <el-button v-if="canDelete(comment.user)" type="danger" size="small" text @click="deleteMainComment(comment.id)">删除</el-button>
-          </div>
-
-          <div v-if="replyBoxIndex === index && replyBoxType === 'main'" class="reply-input-box">
-            <el-input v-model="replyText" :placeholder="'回复 @' + comment.user" @keyup.enter="submitReplyToMain(comment.id)" size="small">
-              <template #append>
-                <el-button type="primary" size="small" :disabled="!replyText.trim()" @click="submitReplyToMain(comment.id)" style="background: #E07A5F; border-color: #E07A5F">发送</el-button>
-              </template>
-            </el-input>
-          </div>
-
-          <div v-if="comment.replies && comment.replies.length > 0" class="replies-container">
-            <div v-for="(reply, rIndex) in getVisibleReplies(comment, index)" :key="'reply-' + reply.id" class="reply-item">
-              <div class="comment-header">
-                <strong class="comment-user">{{ reply.user }}</strong>
-                <span v-if="reply.replyTo" class="reply-to">回复 @{{ reply.replyTo }}</span>
-                <span class="comment-time">{{ formatCommentTime(reply.createTime) }}</span>
-              </div>
-              <div class="comment-content">{{ reply.content }}</div>
-
-              <div class="comment-actions">
-                <el-button v-if="isLoggedIn" type="primary" size="small" text @click="showReplyReplyBox(index, reply)">回复</el-button>
-                <el-button v-if="canDelete(reply.user)" type="danger" size="small" text @click="deleteReply(reply.id)">删除</el-button>
-              </div>
-
-              <div v-if="replyBoxIndex === index && replyBoxReplyId === reply.id && replyBoxType === 'reply'" class="reply-input-box">
-                <el-input v-model="replyText" :placeholder="'回复 @' + reply.user" @keyup.enter="submitReplyToReply(comment.id, reply.id)" size="small">
-                  <template #append>
-                    <el-button type="primary" size="small" :disabled="!replyText.trim()" @click="submitReplyToReply(comment.id, reply.id)" style="background: #E07A5F; border-color: #E07A5F">发送</el-button>
-                  </template>
-                </el-input>
-              </div>
-            </div>
-
-            <el-button v-if="comment.replies.length > 3 && !expandedReplies[index]" type="primary" text size="small" @click="toggleExpand(index)" style="margin-top: 8px">
-              展开 {{ comment.replies.length }} 条回复
-            </el-button>
-            <el-button v-if="expandedReplies[index]" type="primary" text size="small" @click="toggleExpand(index)" style="margin-top: 8px">收起</el-button>
-          </div>
-        </div>
-      </div>
-
-      <div v-if="isLoggedIn">
-        <el-input v-model="newComment" placeholder="写下你的评论..." @keyup.enter="submitComment" style="margin-top: 20px">
-          <template #append>
-            <el-button type="primary" :disabled="!newComment.trim()" @click="submitComment" style="background: #E07A5F; border-color: #E07A5F">发送</el-button>
-          </template>
-        </el-input>
-      </div>
-    </el-dialog>
     <!-- 分页组件 -->
     <div v-if="!detailVisible" class="pagination-wrapper">
       <el-pagination
@@ -199,12 +119,13 @@
  * 提供帖子浏览、筛选、发布、详情查看、评论与回复、删除等完整交互功能
  */
 import {ref, onMounted, computed, nextTick, watch, inject} from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
-import { Delete } from '@element-plus/icons-vue'
 import { success, warning, error } from '../utils/message.js'
 
-const emit = defineEmits(['needLogin'])
+const router = useRouter()
+const route = useRoute()
 const triggerLogin = inject('triggerLogin')
 
 const posts = ref([])
@@ -253,15 +174,12 @@ watch([sortBy, searchKeyword, filterCategory], () => {
   loadPostsFromServer()
 })
 
-const detailVisible = ref(false)
+
 
 const publishVisible = ref(false)
-const currentPost = ref({})
-const comments = ref([])
-const newComment = ref('')
-const isLoggedIn = ref(false)
+
 const loading = ref(false)
-const commentsLoading = ref(false)
+
 
 const postForm = ref({
   category: '',
@@ -269,11 +187,7 @@ const postForm = ref({
   content: ''
 })
 
-const replyBoxIndex = ref(-1)
-const replyBoxReplyId = ref(-1)
-const replyBoxType = ref('')
-const replyText = ref('')
-const expandedReplies = ref({})
+
 
 const currentPage = ref(1)
 const pageSize = ref(10)
@@ -290,30 +204,7 @@ const getCurrentUser = () => {
   try { return JSON.parse(userStr) } catch { return null }
 }
 
-/**
- * 判断当前用户是否有权删除指定评论
- */
-const canDelete = (commentUser) => {
-  const user = getCurrentUser()
-  return isLoggedIn.value && user && commentUser === user.username
-}
 
-/**
- * 检查登录状态并更新本地标记
- */
-const checkLoginStatus = () => { isLoggedIn.value = !!localStorage.getItem('user') }
-
-/**
- * 计算当前帖子下的总评论数（包含主评论和回复）
- */
-const totalComments = computed(() => {
-  let count = 0
-  comments.value.forEach(c => {
-    count += 1
-    if (c.replies) count += c.replies.length
-  })
-  return count
-})
 
 /**
  * 根据帖子分类返回对应的 Element Plus 标签颜色类型
@@ -341,21 +232,33 @@ const formatDateTime = (dateTime) => {
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
-/**
- * 格式化评论时间为本地系统默认格式
- */
-const formatCommentTime = (timeStr) => {
-  if (!timeStr) return ''
-  const date = new Date(timeStr)
-  return date.toLocaleString('zh-CN')
-}
 
 /**
  * 组件挂载时执行：检查登录状态并加载帖子列表
  */
 onMounted(async () => {
-  checkLoginStatus()
+  // 1. 从路由参数恢复分页状态
+  if (route.query.page) {
+    currentPage.value = parseInt(route.query.page)
+  }
+  if (route.query.size) {
+    pageSize.value = parseInt(route.query.size)
+  }
+
   await loadPostsFromServer()
+
+  // 2. 数据加载完成后，恢复滚动位置
+  nextTick(() => {
+    const savedScrollY = sessionStorage.getItem('helpScrollPosition')
+    if (savedScrollY && parseInt(savedScrollY) > 0) {
+      const scrollY = parseInt(savedScrollY)
+      window.scrollTo(0, scrollY)
+      document.documentElement.scrollTop = scrollY
+      document.body.scrollTop = scrollY
+      // 清除已使用的记录
+      sessionStorage.removeItem('helpScrollPosition')
+    }
+  })
 })
 
 /**
@@ -421,261 +324,27 @@ const handleJumpPage = () => {
 }
 
 
-/**
- * 打开发布帖子弹窗，未登录则提示并触发登录事件
- */
-const showPublishDialog = () => {
-  if (!localStorage.getItem('user')) {
-    warning('请先登录才能发布互助帖')
-    triggerLogin()
-    return
-  }
-  postForm.value = { category: '', title: '', content: '' }
-  publishVisible.value = true
-}
-
-const submitPost = async () => {
-  if (!postForm.value.category || !postForm.value.title || !postForm.value.content) {
-    warning('请填写完整信息')
-    return
-  }
-
-  loading.value = true
-  const user = getCurrentUser()
-
-  try {
-    await post('/api/help/publish', {
-      username: user.username,
-      title: postForm.value.title,
-      content: postForm.value.content,
-      category: postForm.value.category
-    })
-
-    success('帖子发布成功！请等待管理员审核')
-    publishVisible.value = false
-    postForm.value = { category: '', title: '', content: '' }
-    await loadPostsFromServer()
-  } catch (err) {
-    error(err.message)
-  } finally {
-    loading.value = false
-  }
-}
 
 
 /**
- * 打开帖子详情弹窗并加载对应评论数据
+ * 跳转到帖子独立详情页
  */
-const showDetail = async (post) => {
-  currentPost.value = post
-  detailVisible.value = true
-  await loadComments(post.id)
-}
+const goToPostDetail = (post) => {
+  // 1. 跳转前保存滚动位置
+  const currentScrollY = window.scrollY || document.documentElement.scrollTop
+  sessionStorage.setItem('helpScrollPosition', currentScrollY.toString())
 
-/**
- * 根据帖子 ID 从后端加载评论列表
- */
-const loadComments = async (postId) => {
-  commentsLoading.value = true
-  try {
-    const data = await get(`/api/help/comments/${postId}`)
-    comments.value = data
-  } catch (err) {
-    error('加载评论失败')
-    comments.value = []
-  } finally {
-    commentsLoading.value = false
-  }
-}
-
-
-/**
- * 提交主评论到后端
- */
-const submitComment = async () => {
-  if (!newComment.value.trim()) {
-    warning('请输入评论内容')
-    return
-  }
-
-  if (!localStorage.getItem('user')) {
-    warning('请先登录才能评论')
-    triggerLogin()
-    return
-  }
-
-
-  const user = getCurrentUser()
-  try {
-    await post('/api/help/comment', {
-      postId: currentPost.value.id,
-      username: user.username,
-      content: newComment.value
-    })
-
-    success('评论成功')
-    newComment.value = ''
-    await loadComments(currentPost.value.id)
-    await loadPostsFromServer()
-  } catch (err) {
-    error(err.message || '评论失败')
-  }
-}
-
-
-/**
- * 提交回复（可回复主评论或二级回复）
- */
-const submitReply = async (commentId, type) => {
-  if (!replyText.value.trim()) {
-    warning('请输入回复内容')
-    return
-  }
-
-  if (!localStorage.getItem('user')) {
-    warning('请先登录才能回复')
-    triggerLogin()
-    return
-  }
-
-
-  const user = getCurrentUser()
-  try {
-    await post('/api/help/comment', {
-      postId: currentPost.value.id,
-      username: user.username,
-      content: replyText.value,
-      parentId: commentId
-    })
-
-    success('回复成功')
-    replyText.value = ''
-    replyBoxIndex.value = -1
-    replyBoxReplyId.value = -1
-    replyBoxType.value = ''
-    await loadComments(currentPost.value.id)
-  } catch (err) {
-    error(err.message || '回复失败')
-  }
-}
-
-
-/**
- * 切换某条评论下回复的展开/收起状态
- */
-const toggleReplies = (commentId) => {
-  expandedReplies.value[commentId] = !expandedReplies.value[commentId]
-}
-
-/**
- * 显示主评论的回复输入框
- */
-const showMainReplyBox = (comment) => {
-  const index = comments.value.indexOf(comment)
-  replyBoxIndex.value = index
-  replyBoxType.value = 'main'
-  replyBoxReplyId.value = -1
-  replyText.value = ''
-}
-
-/**
- * 显示二级回复的回复输入框
- */
-const showReplyReplyBox = (index, reply) => {
-  replyBoxIndex.value = index
-  replyBoxType.value = 'reply'
-  replyBoxReplyId.value = reply.id
-  replyText.value = ''
-}
-
-/**
- * 提交对主评论的回复
- */
-const submitReplyToMain = async (commentId) => {
-  await submitReply(commentId, 'main')
-}
-
-/**
- * 提交对二级回复的回复
- */
-const submitReplyToReply = async (commentId, replyId) => {
-  await submitReply(commentId, 'reply')
-}
-
-/**
- * 获取当前应显示的回复列表（默认显示前 3 条，展开后显示全部）
- */
-const getVisibleReplies = (comment, index) => {
-  if (!comment.replies || comment.replies.length === 0) return []
-  if (expandedReplies.value[index]) return comment.replies
-  return comment.replies.slice(0, 3)
-}
-
-/**
- * 切换指定索引评论的回复展开状态
- */
-const toggleExpand = (index) => {
-  expandedReplies.value[index] = !expandedReplies.value[index]
-}
-
-
-/**
- * 删除主评论的快捷方法
- */
-const deleteMainComment = async (commentId) => {
-  await deleteComment(commentId)
-}
-
-/**
- * 删除二级回复的快捷方法
- */
-const deleteReply = async (replyId) => {
-  await deleteComment(replyId)
-}
-
-/**
- * 显示通用回复输入框（保留兼容）
- */
-const showReplyBox = (index, type, replyId = -1) => {
-  replyBoxIndex.value = index
-  replyBoxType.value = type
-  replyBoxReplyId.value = replyId
-  replyText.value = ''
-}
-
-/**
- * 取消当前回复输入状态，清空输入框
- */
-const cancelReply = () => {
-  replyBoxIndex.value = -1
-  replyBoxReplyId.value = -1
-  replyBoxType.value = ''
-  replyText.value = ''
-}
-
-/**
- * 删除指定评论（含确认弹窗与权限校验）
- */
-const deleteComment = async (commentId) => {
-  try {
-    ElMessageBox.confirm('确定要删除这条评论吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }).then(async () => {
-      const user = getCurrentUser()
-      await del(`/api/help/comment/${commentId}?username=${user.username}`)
-
-      success('删除成功')
-      await loadComments(currentPost.value.id)
-      await loadPostsFromServer()
-    }).catch(() => {})
-  } catch (err) {
-    if (err !== 'cancel') {
-      error(err.message || '删除失败')
+  // 2. 携带分页参数跳转
+  router.push({
+    path: `/post/${post.id}`,
+    query: {
+      page: currentPage.value,
+      size: pageSize.value
     }
-  }
+  })
 }
+
+
 
 // 获取当前登录用户信息
 const currentUser = JSON.parse(localStorage.getItem('user'))
@@ -696,17 +365,64 @@ const handleDeletePost = async (post) => {
       type: 'warning',
     })
   } catch {
-    return// 取消
+    return
   }
 
   try {
-    //后端传入帖子ID和当前用户名
     await del(`/api/help/post/${post.id}`, { username: currentUser.username })
-
     success('删除成功')
     loadPostsFromServer()
   } catch (err) {
     error(err.message || '删除失败')
+  }
+}
+
+/**
+ * 打开发布互助帖弹窗（带登录检查）
+ */
+const showPublishDialog = () => {
+  const user = getCurrentUser()
+  if (!user) {
+    warning('请先登录后再发布帖子')
+    triggerLogin()
+    return
+  }
+  publishVisible.value = true
+}
+
+
+/**
+ * 提交发布互助帖
+ */
+const submitPost = async () => {
+  if (!postForm.value.category || !postForm.value.title || !postForm.value.content) {
+    warning('请填写完整信息')
+    return
+  }
+
+  const user = getCurrentUser()
+  if (!user) {
+    warning('请先登录')
+    return
+  }
+
+  loading.value = true
+  try {
+    await post('/api/help/post', {
+      category: postForm.value.category,
+      title: postForm.value.title,
+      content: postForm.value.content,
+      username: user.username
+    })
+
+    success('发布成功')
+    publishVisible.value = false
+    postForm.value = { category: '', title: '', content: '' }
+    await loadPostsFromServer()
+  } catch (err) {
+    error(err.message || '发布失败')
+  } finally {
+    loading.value = false
   }
 }
 </script>

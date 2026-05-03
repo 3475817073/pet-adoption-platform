@@ -2,6 +2,7 @@ package com.petplatform.petadoption.controller;
 
 import com.petplatform.petadoption.entity.*;
 import com.petplatform.petadoption.service.AdoptionApplicationService;
+import com.petplatform.petadoption.service.HelpPostService;
 import com.petplatform.petadoption.service.PetService;
 import com.petplatform.petadoption.service.UserService;
 import com.petplatform.petadoption.service.VisitRecordService;
@@ -30,6 +31,7 @@ public class PetController {
     private final UserService userService;
     private final AdoptionApplicationService adoptionApplicationService;
     private final VisitRecordService visitRecordService;
+    private final HelpPostService helpPostService;
 
     /**
      * 发布宠物信息
@@ -350,6 +352,27 @@ public class PetController {
             return ResponseEntity.ok("审核成功");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("审核失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取与某只宠物相关的讨论帖子（前3条）
+     * 用于宠物详情页底部展示社区讨论
+     */
+    @GetMapping("/{id}/related-posts")
+    public ResponseEntity<?> getRelatedPosts(@PathVariable Long id) {
+        try {
+            Pet pet = petService.findById(id);
+            if (pet == null) {
+                return ResponseEntity.badRequest().body("宠物不存在");
+            }
+
+            Pageable pageable = PageRequest.of(0, 3, Sort.by(Sort.Direction.DESC, "createTime"));
+            Page<HelpPost> posts = helpPostService.findApprovedByType(pet.getType(), pageable);
+
+            return ResponseEntity.ok(posts.getContent());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
         }
     }
 

@@ -3,6 +3,7 @@ import PetList from '../components/PetList.vue'
 import PublishPet from '../components/PublishPet.vue'
 import PetDetail from '../components/PetDetail.vue'
 import HelpPost from '../components/HelpPost.vue'
+import PostDetail from '../components/PostDetail.vue'
 import MyCenter from '../components/MyCenter.vue'
 import AdminApplyManagement from '../components/AdminApplyManagement.vue'
 import AdminPetReview from '../components/AdminPetReview.vue'
@@ -31,7 +32,12 @@ const routes = [
     {
         path: '/help',
         component: HelpPost,
-        meta: { title: '互助交流' }
+        meta: { title: '社区互助' }
+    },
+    {
+        path: '/post/:id',
+        component: PostDetail,
+        meta: { title: '帖子详情' }
     },
     {
         path: '/center',
@@ -55,12 +61,13 @@ const routes = [
     },
 ]
 
+
 const router = createRouter({
     history: createWebHistory(),
     routes,
     scrollBehavior(to, from, savedPosition) {
         // 如果是从详情页返回列表页，禁止路由层级重置滚动条
-        if (from.path.startsWith('/pet/') && to.path === '/pets') {
+        if ((from.path.startsWith('/pet/') || from.path.startsWith('/post/')) && (to.path === '/pets' || to.path === '/help')) {
             return false
         }
 
