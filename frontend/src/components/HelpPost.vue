@@ -685,7 +685,7 @@ const submitPost = async () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #05e85dec 0%, #05e85dec 50%, #e83105ec 50%, #e83105ec 100%);
+  background: linear-gradient(135deg, #05e85dec 0%, #05e85dec  50%, #e83105ec 50%, #e83105ec 100%);
   background-size: 300% 300%;
   background-position: 0% 0%;
   transition: background-position 0.6s ease;

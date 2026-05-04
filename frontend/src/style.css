@@ -294,3 +294,24 @@ code {
     border-right-color: var(--border);
   }
 }
+
+/* 消息提示穿透样式 - 使用 !important 覆盖所有可能的内联样式 */
+.el-message {
+  pointer-events: none !important;
+  user-select: none !important;
+  z-index: 9999 !important;
+}
+
+.el-message * {
+  pointer-events: auto !important;
+}
+
+.el-message .el-message__closeBtn {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* 确保 hover 时也不阻止穿透 */
+.el-message:hover {
+  pointer-events: none !important;
+}
