@@ -47,28 +47,60 @@ public class HelpPostController {
 
 
     /**
-     * 发布新的互助帖子
+     * 发布新的互助帖子（支持城市和照片）
      */
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
         try {
             String username = (String) request.get("username");
+            if (username == null || username.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("用户名不能为空");
+            }
+
             User user = userService.findByUsername(username);
 
             if (user == null) {
                 return ResponseEntity.badRequest().body("用户不存在");
             }
 
+            String title = (String) request.get("title");
+            String content = (String) request.get("content");
+            String category = (String) request.get("category");
+
+            if (title == null || title.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("标题不能为空");
+            }
+            if (content == null || content.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("内容不能为空");
+            }
+            if (category == null || category.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("分类不能为空");
+            }
+
             HelpPost post = new HelpPost();
             post.setUser(user);
-            post.setTitle((String) request.get("title"));
-            post.setContent((String) request.get("content"));
-            post.setCategory((String) request.get("category"));
+            post.setTitle(title.trim());
+            post.setContent(content.trim());
+            post.setCategory(category.trim());
+
+            // 新增：设置城市
+            Object cityObj = request.get("city");
+            if (cityObj != null && !cityObj.toString().trim().isEmpty() && !"null".equals(cityObj.toString())) {
+                post.setCity(cityObj.toString().trim());
+            }
+
+            // 新增：设置照片 URL 列表（JSON 格式）
+            Object photoUrlsObj = request.get("photoUrls");
+            if (photoUrlsObj != null && !photoUrlsObj.toString().trim().isEmpty() && !"null".equals(photoUrlsObj.toString())) {
+                post.setPhotoUrls(photoUrlsObj.toString());
+            }
+
             post.setStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
 
             helpPostService.save(post);
             return ResponseEntity.ok("发布成功，请等待管理员审核");
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.badRequest().body("发布失败：" + e.getMessage());
         }
     }
@@ -338,4 +370,5 @@ public class HelpPostController {
         return post != null ? ResponseEntity.ok(post) : ResponseEntity.notFound().build();
     }
 }
+
 

@@ -41,11 +41,21 @@
         <div class="post-head">
           <h1 class="title">{{ postData.title }}</h1>
           <div class="tags">
-            <el-tag effect="plain" round size="small" class="tag-item">
-              {{ postData.category }}
-            </el-tag>
-            <span class="tag-item location"># 待领养</span>
-            <span class="tag-item location"># 坐标：长沙</span>
+            <span class="tag-item category-tag">{{ postData.category }}</span>
+            <span v-if="postData.city" class="tag-item location-tag">  {{ postData.city }}</span>
+            <span class="tag-item status-tag"># 待领养</span>
+          </div>
+        </div>
+
+        <!-- 图片展示区域 -->
+        <div v-if="postImages && postImages.length > 0" class="post-images">
+          <div
+              v-for="(img, index) in postImages"
+              :key="index"
+              class="image-wrapper"
+              :class="{ 'single-image': postImages.length === 1 }"
+          >
+            <img :src="getImageUrl(img)" :alt="`图片${index + 1}`" />
           </div>
         </div>
 
@@ -104,7 +114,7 @@
           <!-- 抽屉头部 -->
           <div class="drawer-header">
             <h3 class="drawer-title">评论区 ({{ totalComments }})</h3>
-            <button class="close-btn" @click="closeCommentPanel">✕</button>
+            <button class="close-btn" @click="closeCommentPanel"></button>
           </div>
 
           <!-- 评论列表（独立滚动） -->
@@ -162,47 +172,47 @@
                       </el-input>
                     </div>
 
-                  <!-- 展开/收起 -->
-                  <div v-if="comment.replies.length > 3" class="expand-btn" @click="toggleExpand(index)">
-                    {{ expandedReplies[index] ? '收起回复' : `查看全部 ${comment.replies.length} 条回复` }}
+                    <!-- 展开/收起 -->
+                    <div v-if="comment.replies.length > 3" class="expand-btn" @click="toggleExpand(index)">
+                      {{ expandedReplies[index] ? '收起回复' : `查看全部 ${comment.replies.length} 条回复` }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <!-- 抽屉底部：评论输入框（固定） -->
-          <div class="drawer-footer">
-            <div v-if="isLoggedIn" class="comment-input-box">
-              <el-input
-                  v-model="newComment"
-                  type="textarea"
-                  :rows="2"
-                  placeholder="写下你的想法..."
-                  resize="none"
-                  @keyup.ctrl.enter="submitComment"
-              />
-              <div class="input-footer">
-                <span class="tip">按 Ctrl + Enter 发送</span>
-                <el-button type="primary" :disabled="!newComment.trim()" @click="submitComment" class="submit-btn">
-                  发送
+            <!-- 抽屉底部：评论输入框（固定） -->
+            <div class="drawer-footer">
+              <div v-if="isLoggedIn" class="comment-input-box">
+                <el-input
+                    v-model="newComment"
+                    type="textarea"
+                    :rows="2"
+                    placeholder="写下你的想法..."
+                    resize="none"
+                    @keyup.ctrl.enter="submitComment"
+                />
+                <div class="input-footer">
+                  <span class="tip">按 Ctrl + Enter 发送</span>
+                  <el-button type="primary" :disabled="!newComment.trim()" @click="submitComment" class="submit-btn">
+                    发送
+                  </el-button>
+                </div>
+              </div>
+
+
+              <!-- 未登录提示 -->
+              <div v-else class="login-prompt">
+                <div class="prompt-icon"></div>
+                <div class="prompt-content">
+                  <div class="prompt-title">登录后参与互动</div>
+                  <div class="prompt-desc">登录后即可发表评论、点赞收藏</div>
+                </div>
+                <el-button type="primary" @click="triggerLogin" class="login-btn">
+                  立即登录
                 </el-button>
               </div>
             </div>
-
-
-            <!-- 未登录提示 -->
-            <div v-else class="login-prompt">
-              <div class="prompt-icon"></div>
-              <div class="prompt-content">
-                <div class="prompt-title">登录后参与互动</div>
-                <div class="prompt-desc">登录后即可发表评论、点赞收藏</div>
-              </div>
-              <el-button type="primary" @click="triggerLogin" class="login-btn">
-                立即登录
-              </el-button>
-            </div>
-          </div>
           </div>
         </div>
       </div>
@@ -210,7 +220,8 @@
   </div>
 </template>
 
-<script setup>import { ref, computed, onMounted, inject } from 'vue'
+<script setup>
+import { ref, computed, onMounted, inject, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { get, post, del } from '../utils/request.js'
@@ -226,6 +237,7 @@ const comments = ref([])
 const commentsLoading = ref(false)
 const newComment = ref('')
 const isLoggedIn = ref(false)
+const postImages = ref([])
 
 const replyBoxIndex = ref(-1)
 const replyBoxReplyId = ref(-1)
@@ -257,7 +269,22 @@ const getCurrentUser = () => {
   try { return JSON.parse(userStr) } catch { return null }
 }
 
-const checkLoginStatus = () => { isLoggedIn.value = !!localStorage.getItem('user') }
+const checkLoginStatus = () => {
+  const wasLoggedIn = isLoggedIn.value
+  isLoggedIn.value = !!localStorage.getItem('user')
+
+  // 如果从未登录变为已登录，重新加载评论区
+  if (!wasLoggedIn && isLoggedIn.value) {
+    loadComments()
+  }
+}
+
+// 监听 localStorage 变化，实时更新登录状态
+const handleStorageChange = (e) => {
+  if (e.key === 'user') {
+    checkLoginStatus()
+  }
+}
 
 const canDelete = (commentUser) => {
   const user = getCurrentUser()
@@ -296,10 +323,25 @@ const getPetImage = (pet) => {
   return null
 }
 
+const getImageUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : 'http://localhost:8080' + url
+}
+
 const loadPostDetail = async () => {
   loading.value = true
   try {
     postData.value = await get(`/api/help/${route.params.id}`)
+
+    // 解析图片URL列表
+    if (postData.value.photoUrls) {
+      try {
+        postImages.value = JSON.parse(postData.value.photoUrls)
+      } catch (e) {
+        // 如果是单个字符串而不是JSON数组
+        postImages.value = [postData.value.photoUrls]
+      }
+    }
   } catch (err) {
     error('加载失败')
   } finally {
@@ -409,6 +451,14 @@ onMounted(() => {
   checkLoginStatus()
   loadPostDetail()
   loadComments()
+
+  // 监听 localStorage 变化
+  window.addEventListener('storage', handleStorageChange)
+})
+
+onUnmounted(() => {
+  // 清理事件监听器
+  window.removeEventListener('storage', handleStorageChange)
 })
 </script>
 
@@ -512,9 +562,109 @@ onMounted(() => {
   font-size: 24px; font-weight: 800; color: #222;
   margin: 0 0 16px 0; line-height: 1.4;
 }
-.tags { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
-.tag-item { font-size: 12px; }
-.location { color: #666; font-size: 12px; }
+
+/* 标签容器 - 使用 Flexbox 对齐 */
+.tags {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 统一标签样式 */
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* 分类标签 - 琥珀橙色 */
+.category-tag {
+  background: linear-gradient(135deg, rgba(224, 122, 95, 0.12), rgba(242, 204, 143, 0.12));
+  border: 1.5px solid rgba(224, 122, 95, 0.4);
+  color: #D4694F;
+}
+
+/* 位置标签 - 森林绿色 */
+.location-tag {
+  background: linear-gradient(135deg, rgba(129, 178, 154, 0.12), rgba(168, 213, 186, 0.12));
+  border: 1.5px solid rgba(129, 178, 154, 0.4);
+  color: #6B9E85;
+}
+
+/* 状态标签 - 灰色 */
+.status-tag {
+  background: #F3F4F6;
+  border: 1.5px solid #E5E7EB;
+  color: #6B7280;
+}
+
+/* 图片展示区域 */
+.post-images {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 28px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* 单张图片 */
+.post-images .single-image {
+  grid-template-columns: 1fr;
+  max-width: 600px;
+}
+
+.post-images .single-image .image-wrapper {
+  aspect-ratio: 16 / 9;
+}
+
+/* 2张图片 */
+.post-images:has(.image-wrapper:nth-child(2)):not(:has(.image-wrapper:nth-child(3))) {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* 3张图片 */
+.post-images:has(.image-wrapper:nth-child(3)):not(:has(.image-wrapper:nth-child(4))) {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 4张图片 - 2x2网格 */
+.post-images:has(.image-wrapper:nth-child(4)) {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* 5-9张图片 - 3x3网格 */
+.post-images:has(.image-wrapper:nth-child(5)) {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.image-wrapper {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #F3F4F6;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.image-wrapper:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 /* 正文 */
 .content-body { margin-bottom: 32px; }

@@ -118,6 +118,12 @@ const handleLoginSuccess = (user) => {
   username.value = user.username || user.realName
   userRole.value = user.role
   localStorage.setItem('user', JSON.stringify(user))
+
+  // 手动触发 storage 事件，通知其他组件登录状态已改变
+  window.dispatchEvent(new StorageEvent('storage', {
+    key: 'user',
+    newValue: JSON.stringify(user)
+  }))
 }
 
 const logout = () => {

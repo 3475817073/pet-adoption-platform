@@ -10,19 +10,19 @@
 
         <div class="quick-categories">
           <div class="category-card" @click="filterByType('狗')">
-            <div class="category-icon">🐶</div>
+            <img src="@/assets/dog-icon.png" class="category-icon" alt="狗狗" />
             <span class="category-name">狗狗</span>
           </div>
           <div class="category-card" @click="filterByType('猫')">
-            <div class="category-icon">🐱</div>
+            <img src="@/assets/cat-icon.png" class="category-icon" alt="猫咪" />
             <span class="category-name">猫咪</span>
           </div>
           <div class="category-card" @click="filterByType('其他')">
-            <div class="category-icon">🐰</div>
+            <img src="@/assets/otheranimal-icon.png" class="category-icon" alt="其他动物" />
             <span class="category-name">其他动物</span>
           </div>
           <div class="category-card" @click="resetFilter">
-            <div class="category-icon">🐾</div>
+            <img src="@/assets/allanimals-icon.png" class="category-icon" alt="全部宠物" />
             <span class="category-name">全部宠物</span>
           </div>
         </div>
@@ -76,7 +76,7 @@
       <el-col v-for="pet in pets" :key="pet.id" :xs="24" :sm="12" :md="8" :lg="6" class="pet-grid-item">
         <el-card class="pet-card" shadow="never" :body-style="{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }">
           <div class="image-container" @click="showDetail(pet)">
-            <img v-if="getPetImageUrl(pet)" :src="getPetImageUrl(pet)" class="pet-image" />
+            <img v-if="getPetImage(pet)" :src="getPetImage(pet)" class="pet-image" />
             <div v-else class="no-image"></div>
 
             <!-- 状态标签 -->
@@ -335,11 +335,10 @@ const showDetail = (pet) => {
 
 /**
  * 获取宠物首张图片 URL（优先使用 photoUrl，其次解析 photoUrls JSON 数组）
- */
-const getPetImageUrl = (pet) => {
-  if (pet.photoUrl) {
-    return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
-  }
+*/
+const getPetImage = (pet) => {
+  if (!pet) return null
+  if (pet.photoUrl) return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
   if (pet.photoUrls) {
     try {
       const photos = JSON.parse(pet.photoUrls)
@@ -347,11 +346,14 @@ const getPetImageUrl = (pet) => {
         const url = photos[0]
         return url.startsWith('http') ? url : 'http://localhost:8080' + url
       }
-    } catch {
-      return null
-    }
+    } catch {}
   }
   return null
+}
+
+const getImageUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : 'http://localhost:8080' + url
 }
 
 /**
@@ -510,8 +512,9 @@ const onApplySuccess = () => {
 }
 
 .category-icon {
-  font-size: 48px;
-  line-height: 1;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .category-name {

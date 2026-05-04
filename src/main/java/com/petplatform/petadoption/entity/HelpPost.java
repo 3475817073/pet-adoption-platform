@@ -18,8 +18,16 @@ public class HelpPost {
     private User user;//用户
 
     private String title;//标题
+
+    @Column(columnDefinition = "TEXT")
     private String content;//内容
+
     private String category;   //分类：物资共享 / 医疗咨询 / 经验分享
+
+    private String city;  // 所在城市
+
+    @Column(columnDefinition = "TEXT")
+    private String photoUrls;  // 图片URL列表
 
     //审核状态
     @Enumerated(EnumType.STRING)
