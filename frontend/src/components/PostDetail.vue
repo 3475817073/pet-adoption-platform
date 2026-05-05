@@ -55,7 +55,14 @@
               class="image-wrapper"
               :class="{ 'single-image': postImages.length === 1 }"
           >
-            <img :src="getImageUrl(img)" :alt="`图片${index + 1}`" />
+            <el-image
+                :src="getImageUrl(img)"
+                :preview-src-list="previewPostImageList"
+                :initial-index="index"
+                fit="cover"
+                preview-teleported
+                class="post-detail-image"
+            />
           </div>
         </div>
 
@@ -253,6 +260,13 @@ const likeCount = ref(27)
 const handleLike = () => { warning('点赞功能开发中') }
 const handleCollect = () => { warning('收藏功能开发中') }
 const handleShare = () => { warning('分享功能开发中') }
+
+// 计算预览图片列表
+const previewPostImageList = computed(() => {
+  if (!postImages.value || postImages.value.length === 0) return []
+  return postImages.value.map(img => getImageUrl(img))
+})
+
 
 const totalComments = computed(() => {
   let count = 0
@@ -659,11 +673,17 @@ onUnmounted(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
-.image-wrapper img {
+.post-detail-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.post-detail-image :deep(.el-image__inner) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  cursor: zoom-in;
 }
 
 /* 正文 */

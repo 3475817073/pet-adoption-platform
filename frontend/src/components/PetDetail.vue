@@ -19,10 +19,17 @@
       <!-- 左侧：照片展示区 -->
       <div class="profile-photo-section">
         <div class="photo-frame">
-          <img v-if="pet.photos && pet.photos.length > 0"
-               :src="'http://localhost:8080' + pet.photos[currentPhotoIndex]"
-               class="profile-main-img" />
+          <el-image
+              v-if="pet.photos && pet.photos.length > 0"
+              :src="'http://localhost:8080' + pet.photos[currentPhotoIndex]"
+              :preview-src-list="previewImageList"
+              :initial-index="currentPhotoIndex"
+              fit="cover"
+              class="profile-main-img"
+              preview-teleported
+          />
           <div v-else class="profile-main-img no-image-placeholder"></div>
+
 
           <!-- 切换箭头 -->
           <button
@@ -41,13 +48,17 @@
 
         <!-- 多照片缩略图 -->
         <div v-if="pet.photos && pet.photos.length > 1" class="thumbnail-strip">
-          <img
+          <el-image
               v-for="(photo, index) in pet.photos"
               :key="index"
               :src="'http://localhost:8080' + photo"
+              :preview-src-list="previewImageList"
+              :initial-index="index"
+              fit="cover"
               class="thumbnail"
               :class="{ 'active': currentPhotoIndex === index }"
               @click="currentPhotoIndex = index"
+              preview-teleported
           />
         </div>
       </div>
@@ -179,7 +190,8 @@
   </div>
 </template>
 
-<script setup>import { ref, onMounted, inject } from 'vue'
+<script setup>
+import { ref, onMounted, inject ,computed} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get } from '../utils/request.js'
 import AdoptionApply from './AdoptionApply.vue'
@@ -198,6 +210,12 @@ const applyDialogVisible = ref(false)
 const relatedPosts = ref([])
 const relatedPostsLoading = ref(false)
 
+
+// 计算预览图片列表
+const previewImageList = computed(() => {
+  if (!pet.value || !pet.value.photos) return []
+  return pet.value.photos.map(photo => 'http://localhost:8080' + photo)
+})
 
 // 加载宠物详情
 const loadPetDetail = async () => {

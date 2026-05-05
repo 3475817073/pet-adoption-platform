@@ -22,7 +22,7 @@ public class HelpPost {
     @Column(columnDefinition = "TEXT")
     private String content;//内容
 
-    private String category;   //分类：物资共享 / 医疗咨询 / 经验分享
+    private String category;   //分类
 
     private String city;  // 所在城市
 

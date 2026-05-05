@@ -107,11 +107,6 @@
 
             <p class="description">{{ pet.description }}</p>
 
-            <!-- 社区讨论入口 -->
-            <div class="community-link" @click.stop="goToCommunityWithFilter(pet.type)">
-              <span class="link-icon">💬</span>
-              <span class="link-text">{{ getDiscussionCount(pet.type) }}条养护心得</span>
-            </div>
 
 
             <el-button type="primary" class="adopt-btn" :disabled="pet.status === 'ADOPTED'" @click="applyAdopt(pet)">
@@ -186,8 +181,7 @@ const pageSize = ref(12)
 /** 总记录数 */
 const total = ref(0)
 
-/** 社区讨论相关 */
-const discussionCounts = ref({})
+
 
 /**
  * 从后端加载宠物列表数据，支持分页与多条件筛选
@@ -228,7 +222,7 @@ onMounted(() => {
     pageSize.value = parseInt(route.query.size)
   }
   loadPets()
-  loadDiscussionCounts()
+
 })
 
 /**
@@ -428,41 +422,7 @@ const onApplySuccess = () => {
   success('领养申请已提交！请等待管理员审核')
 }
 
-/**
- * 加载各宠物类型的讨论数量统计
- */
-const loadDiscussionCounts = async () => {
-  try {
-    const types = ['猫', '狗', '其他']
-    for (const type of types) {
-      const count = await get('/api/help/count-by-pet-type', { petType: type })
-      discussionCounts.value[type] = count
-    }
-  } catch (err) {
-    console.error('加载讨论数失败:', err)
-  }
-}
 
-/**
- * 获取某类型的讨论数
- */
-const getDiscussionCount = (type) => {
-  return discussionCounts.value[type] || 0
-}
-
-/**
- * 跳转到社区并筛选该类型
- */
-const goToCommunityWithFilter = (petType) => {
-  router.push({
-    path: '/help',
-    query: {
-      petType: petType,
-      page: 1,
-      size: 10
-    }
-  })
-}
 
 </script>
 
@@ -945,31 +905,5 @@ const goToCommunityWithFilter = (petType) => {
   font-weight: 500;
 }
 
-.community-link {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: rgba(204, 120, 92, 0.08);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.community-link:hover {
-  background: rgba(204, 120, 92, 0.15);
-  transform: translateX(4px);
-}
-
-.link-icon {
-  font-size: 16px;
-}
-
-.link-text {
-  font-size: 13px;
-  color: #cc785c;
-  font-weight: 600;
-}
 
 </style>

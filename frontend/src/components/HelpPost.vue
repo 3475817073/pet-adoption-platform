@@ -21,6 +21,11 @@
             <el-option label="📦 物资共享" value="物资共享" />
             <el-option label="🏥 医疗咨询" value="医疗咨询" />
             <el-option label="📚 经验分享" value="经验分享" />
+            <el-option label="🔍 寻宠启事" value="寻宠启事" />
+            <el-option label="💝 领养回访" value="领养回访" />
+            <el-option label="🆘 求助信息" value="求助信息" />
+            <el-option label="🎉 活动聚会" value="活动聚会" />
+            <el-option label="🛒 闲置转让" value="闲置转让" />
           </el-select>
         </el-col>
         <el-col :span="5">
@@ -204,7 +209,28 @@
                   />
                 </el-form-item>
 
-
+                <el-form-item label="关联宠物（可选）" class="form-item">
+                  <el-select
+                      v-model="postForm.relatedPetId"
+                      placeholder="选择关联的宠物，方便其他人找到它"
+                      clearable
+                      filterable
+                      class="pet-select"
+                  >
+                    <el-option
+                        v-for="pet in availablePets"
+                        :key="pet.id"
+                        :label="`${pet.name}（${pet.type}）`"
+                        :value="pet.id"
+                    >
+                      <div style="display: flex; align-items: center; gap: 8px">
+                        <img v-if="getPetThumb(pet)" :src="getPetThumb(pet)" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover" />
+                        <span>{{ pet.name }}</span>
+                        <el-tag size="small">{{ pet.type }}</el-tag>
+                      </div>
+                    </el-option>
+                  </el-select>
+                </el-form-item>
 
               </el-form>
             </div>
@@ -309,7 +335,12 @@ const fileInput = ref(null)
 const categories = [
   { label: '物资共享', value: '物资共享', icon: '📦' },
   { label: '医疗咨询', value: '医疗咨询', icon: '🏥' },
-  { label: '经验分享', value: '经验分享', icon: '' }
+  { label: '经验分享', value: '经验分享', icon: '📚' },
+  { label: '寻宠启事', value: '寻宠启事', icon: '🔍' },
+  { label: '领养回访', value: '领养回访', icon: '💝' },
+  { label: '求助信息', value: '求助信息', icon: '🆘' },
+  { label: '活动聚会', value: '活动聚会', icon: '🎉' },
+  { label: '闲置转让', value: '闲置转让', icon: '🛒' }
 ]
 
 const postForm = ref({
@@ -317,13 +348,18 @@ const postForm = ref({
   title: '',
   content: '',
   city: '',
-  images: []
+  images: [],
+  relatedPetId: null
 })
+
 
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const jumpPage = ref(1)
+
+//可关联的宠物列表
+const availablePets = ref([])
 
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
@@ -335,7 +371,12 @@ const getCategoryType = (category) => {
   const typeMap = {
     '物资共享': '',
     '医疗咨询': 'warning',
-    '经验分享': 'info'
+    '经验分享': 'info',
+    '寻宠启事': 'danger',
+    '领养回访': 'success',
+    '求助信息': 'warning',
+    '活动聚会': '',
+    '闲置转让': 'info'
   }
   return typeMap[category] || ''
 }
@@ -370,6 +411,37 @@ const getPostCover = (post) => {
     }
   }
   return null
+}
+
+/**
+ * 获取宠物缩略图
+ */
+const getPetThumb = (pet) => {
+  if (pet.photoUrl) {
+    return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
+  }
+  if (pet.photoUrls) {
+    try {
+      const photos = JSON.parse(pet.photoUrls)
+      if (photos && photos.length > 0) {
+        const url = photos[0]
+        return url.startsWith('http') ? url : 'http://localhost:8080' + url
+      }
+    } catch {}
+  }
+  return null
+}
+
+/**
+ * 加载待领养宠物列表
+ */
+const loadAvailablePets = async () => {
+  try {
+    const data = await get('/api/pet/list', { page: 0, size: 50 })
+    availablePets.value = data.content.filter(pet => pet.status === 'AVAILABLE')
+  } catch (err) {
+    console.error('加载宠物列表失败:', err)
+  }
 }
 
 onMounted(async () => {
@@ -493,6 +565,7 @@ const showPublishPanel = () => {
   }
   publishVisible.value = true
   document.body.style.overflow = 'hidden'
+  loadAvailablePets()
 }
 
 const closePublishPanel = () => {
@@ -503,9 +576,11 @@ const closePublishPanel = () => {
     title: '',
     content: '',
     city: '',
-    images: []
+    images: [],
+    relatedPetId: null
   }
 }
+
 
 const handleFileSelect = (event) => {
   const files = Array.from(event.target.files)
@@ -642,6 +717,9 @@ const submitPost = async () => {
     }
     if (photoUrls.length > 0) {
       payload.photoUrls = JSON.stringify(photoUrls)
+    }
+    if (postForm.value.relatedPetId) {
+      payload.relatedPetId = postForm.value.relatedPetId
     }
 
     console.log('发送发布请求:', payload)

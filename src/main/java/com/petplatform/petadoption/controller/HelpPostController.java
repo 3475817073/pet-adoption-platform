@@ -31,6 +31,7 @@ public class HelpPostController {
     private final HelpPostService helpPostService;
     private final UserService userService;
     private final CommentService commentService;
+    private final com.petplatform.petadoption.service.PetService petService;
 
     /**
      * 分页获取互助帖子列表
@@ -90,19 +91,38 @@ public class HelpPostController {
             post.setContent(content.trim());
             post.setCategory(category.trim());
 
-            // 新增：设置城市
+            // 设置城市
             Object cityObj = request.get("city");
             if (cityObj != null && !cityObj.toString().trim().isEmpty() && !"null".equals(cityObj.toString())) {
                 post.setCity(cityObj.toString().trim());
             }
 
-            // 新增：设置照片 URL 列表（JSON 格式）
+            // 设置照片 URL 列表（JSON 格式）
             Object photoUrlsObj = request.get("photoUrls");
             if (photoUrlsObj != null && !photoUrlsObj.toString().trim().isEmpty() && !"null".equals(photoUrlsObj.toString())) {
                 post.setPhotoUrls(photoUrlsObj.toString());
             }
 
+            // 设置关联宠物
+            if (request.get("relatedPetId") != null) {
+                try {
+                    Long relatedPetId = Long.valueOf(request.get("relatedPetId").toString());
+                    com.petplatform.petadoption.entity.Pet relatedPet = petService.findById(relatedPetId);
+                    if (relatedPet != null) {
+                        post.setRelatedPet(relatedPet);
+                        System.out.println("✅ 帖子关联宠物成功: " + relatedPet.getName() + " (ID: " + relatedPetId + ")");
+                    } else {
+                        System.err.println("⚠️ 关联宠物不存在: " + relatedPetId);
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ 关联宠物ID无效: " + request.get("relatedPetId") + ", 错误: " + e.getMessage());
+                }
+            }
+
             post.setStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
+
+            System.out.println("📝 发布帖子: title=" + post.getTitle() + ", status=" + post.getStatus() + ", relatedPet=" + (post.getRelatedPet() != null ? post.getRelatedPet().getName() : "null"));
+
 
             helpPostService.save(post);
             return ResponseEntity.ok("发布成功，请等待管理员审核");
