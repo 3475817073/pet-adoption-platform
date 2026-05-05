@@ -39,11 +39,18 @@ public class HelpPostController {
     public ResponseEntity<Page<HelpPost>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
-            @RequestParam(defaultValue = "newest") String sortBy) {
+            @RequestParam(defaultValue = "newest") String sortBy,
+            @RequestParam(required = false) String petType) {
         Sort.Direction direction = "oldest".equals(sortBy) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "createTime"));
-        return ResponseEntity.ok(helpPostService.findApprovedPage(pageable));
+
+        if (petType != null && !petType.isEmpty()) {
+            return ResponseEntity.ok(helpPostService.findApprovedByType(petType, pageable));
+        } else {
+            return ResponseEntity.ok(helpPostService.findApprovedPage(pageable));
+        }
     }
+
 
 
     /**
@@ -369,6 +376,17 @@ public class HelpPostController {
         HelpPost post = helpPostService.findById(id);
         return post != null ? ResponseEntity.ok(post) : ResponseEntity.notFound().build();
     }
+
+    /**
+     * 统计某类宠物的相关帖子数量
+     */
+    @GetMapping("/count-by-pet-type")
+    public ResponseEntity<Long> countByPetType(@RequestParam String petType) {
+        long count = helpPostService.countByRelatedPetType(petType);
+        return ResponseEntity.ok(count);
+    }
+
+
 }
 
 

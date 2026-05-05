@@ -31,5 +31,15 @@ public interface HelpPostRepository extends JpaRepository<HelpPost, Long> {
             "(h.relatedPet.type = :petType OR " +
             "LOWER(h.title) LIKE LOWER(CONCAT('%', :petType, '%')) OR " +
             "LOWER(h.content) LIKE LOWER(CONCAT('%', :petType, '%')))")
-    Page<HelpPost> findApprovedByPetType(@Param("petType") String petType, @Param("status") PostStatus status, Pageable pageable);
+    Page<HelpPost> findApprovedByPetType(
+            @Param("petType") String petType,
+            @Param("status") PostStatus status, Pageable pageable);
+
+
+    /**
+     * 根据宠物类型查询帖子数量
+     */
+    long countByRelatedPet_TypeAndStatus(String petType, PostStatus status);
+
+
 }

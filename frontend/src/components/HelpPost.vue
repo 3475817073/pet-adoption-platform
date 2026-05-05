@@ -10,12 +10,12 @@
 
     <!-- 筛选栏 -->
     <div class="filter-section">
-      <el-row :gutter="15">
-        <el-col :span="8">
-          <el-input v-model="searchKeyword" placeholder=" 搜索帖子标题或内容" clearable
+      <el-row :gutter="15" align="middle">
+        <el-col :span="7">
+          <el-input v-model="searchKeyword" placeholder="🔍 搜索帖子标题或内容" clearable
                     class="search-input" />
         </el-col>
-        <el-col :span="6">
+        <el-col :span="5">
           <el-select v-model="filterCategory" placeholder="筛选分类" clearable class="filter-select">
             <el-option label="全部" value="" />
             <el-option label="📦 物资共享" value="物资共享" />
@@ -23,19 +23,28 @@
             <el-option label="📚 经验分享" value="经验分享" />
           </el-select>
         </el-col>
-        <el-col :span="6">
+        <el-col :span="5">
+          <el-select v-model="filterPetType" placeholder="🐾 宠物类型" clearable class="filter-select">
+            <el-option label="全部" value="" />
+            <el-option label="🐱 猫咪" value="猫" />
+            <el-option label="🐶 狗狗" value="狗" />
+            <el-option label="🐰 其他" value="其他" />
+          </el-select>
+        </el-col>
+        <el-col :span="4">
           <el-select v-model="sortBy" placeholder="排序方式" class="filter-select">
             <el-option label="最新发布" value="newest" />
             <el-option label="最早发布" value="oldest" />
           </el-select>
         </el-col>
-        <el-col :span="4">
+        <el-col :span="3">
           <el-button type="primary" @click="resetFilter" class="reset-btn">
             重置
           </el-button>
         </el-col>
       </el-row>
     </div>
+
 
     <!-- 卡片式帖子列表 -->
     <el-row :gutter="24">
@@ -195,6 +204,8 @@
                   />
                 </el-form-item>
 
+
+
               </el-form>
             </div>
           </div>
@@ -248,6 +259,7 @@ const triggerLogin = inject('triggerLogin')
 const posts = ref([])
 const searchKeyword = ref('')
 const filterCategory = ref('')
+const filterPetType = ref('')
 const sortBy = ref('newest')
 
 // 省市区数据源（直接使用 npm 包提供的完整数据）
@@ -278,12 +290,13 @@ const filteredPosts = computed(() => {
 const resetFilter = () => {
   searchKeyword.value = ''
   filterCategory.value = ''
+  filterPetType.value = ''
   sortBy.value = 'newest'
   currentPage.value = 1
   loadPostsFromServer()
 }
 
-watch([sortBy, searchKeyword, filterCategory], () => {
+watch([sortBy, searchKeyword, filterCategory, filterPetType], () => {
   currentPage.value = 1
   loadPostsFromServer()
 })
@@ -379,14 +392,21 @@ onMounted(async () => {
   })
 })
 
+
 const loadPostsFromServer = async () => {
   loading.value = true
   try {
-    const data = await get('/api/help/list', {
+    const params = {
       page: currentPage.value - 1,
       size: pageSize.value,
       sortBy: sortBy.value
-    })
+    }
+
+    if (filterPetType.value) {
+      params.petType = filterPetType.value
+    }
+
+    const data = await get('/api/help/list', params)
     posts.value = data.content
     total.value = data.totalElements
 

@@ -88,5 +88,14 @@ public class HelpPostService {
     public Page<HelpPost> findApprovedByType(String petType, Pageable pageable) {
         return helpPostRepository.findApprovedByPetType(petType, PostStatus.APPROVED, pageable);
     }
+
+    /**
+     * 统计指定宠物类型相关的帖子数量
+     */
+    public long countByRelatedPetType(String petType) {
+        return helpPostRepository.countByRelatedPet_TypeAndStatus(petType, PostStatus.APPROVED);
+    }
+
+
 }
 
