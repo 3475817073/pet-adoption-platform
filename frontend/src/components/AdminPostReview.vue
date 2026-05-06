@@ -26,10 +26,11 @@
               {{ formatTime(row.createTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
               <el-button type="success" size="small" @click="handleReview(row, 'approve')">通过</el-button>
-              <el-button type="danger" size="small" @click="handleReview(row, 'reject')">拒绝</el-button>
+              <el-button type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -72,6 +73,11 @@
               {{ formatTime(row.createTime) }}
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
         <div class="pagination-wrapper">
@@ -111,6 +117,11 @@
               {{ formatTime(row.createTime) }}
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
         <div class="pagination-wrapper">
@@ -127,6 +138,57 @@
         </div>
       </el-tab-pane>
     </el-tabs>
+
+    <!-- 帖子详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="帖子详细信息" width="800px">
+      <div v-if="currentPost" class="post-detail">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="标题">{{ currentPost.title }}</el-descriptions-item>
+          <el-descriptions-item label="分类">
+            <el-tag :type="getCategoryTag(currentPost.category)">
+              {{ getCategoryText(currentPost.category) }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="城市">{{ currentPost.city || '未填写' }}</el-descriptions-item>
+          <el-descriptions-item label="发布者">{{ currentPost.user?.username }}</el-descriptions-item>
+          <el-descriptions-item label="发布时间">{{ formatTime(currentPost.createTime) }}</el-descriptions-item>
+          <el-descriptions-item label="内容">
+            <div style="white-space: pre-wrap; line-height: 1.8">{{ currentPost.content }}</div>
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <!-- 帖子图片 -->
+        <div v-if="getPostImages(currentPost).length > 0" style="margin-top: 20px">
+          <h4 style="margin-bottom: 10px; color: #666">帖子图片</h4>
+          <el-row :gutter="10">
+            <el-col :span="6" v-for="(img, index) in getPostImages(currentPost)" :key="index">
+              <img :src="img" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; cursor: pointer" />
+            </el-col>
+          </el-row>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 拒绝理由对话框 -->
+    <el-dialog v-model="rejectDialogVisible" title="拒绝帖子发布" width="500px">
+      <el-form label-width="100px">
+        <el-form-item label="帖子标题">
+          <span>{{ currentPost?.title }}</span>
+        </el-form-item>
+        <el-form-item label="拒绝理由" required>
+          <el-input
+              v-model="rejectReason"
+              type="textarea"
+              :rows="4"
+              placeholder="请填写拒绝理由，该理由将展示给用户..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmReject" :disabled="!rejectReason.trim()">确认拒绝</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -160,6 +222,15 @@ const rejectedPage = ref(1)
 const rejectedPageSize = ref(10)
 const rejectedTotal = ref(0)
 
+// 详情对话框
+const detailDialogVisible = ref(false)
+const currentPost = ref(null)
+
+// 拒绝对话框
+const rejectDialogVisible = ref(false)
+const rejectReason = ref('')
+const rejectingPost = ref(null)
+
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
@@ -174,8 +245,8 @@ const formatTime = (time) => {
 const getCategoryText = (category) => {
   const map = {
     '物资共享': '📦 物资共享',
-    '医疗咨询': '🏥 医疗咨询',
-    '经验分享': '💡 经验分享'
+    '医疗咨询': ' 医疗咨询',
+    '经验分享': ' 经验分享'
   }
   return map[category] || category
 }
@@ -187,6 +258,19 @@ const getCategoryTag = (category) => {
     '经验分享': 'warning'
   }
   return map[category] || ''
+}
+
+const getPostImages = (post) => {
+  if (!post.photoUrls) return []
+  try {
+    const photos = JSON.parse(post.photoUrls)
+    if (photos && photos.length > 0) {
+      return photos.map(url => url.startsWith('http') ? url : 'http://localhost:8080' + url)
+    }
+  } catch {
+    return []
+  }
+  return []
 }
 
 const loadPending = async () => {
@@ -239,11 +323,14 @@ const loadRejected = async () => {
   }
 }
 
+const viewDetail = (post) => {
+  currentPost.value = post
+  detailDialogVisible.value = true
+}
 
 const handleReview = async (helpPost, action) => {
-  const actionText = action === 'approve' ? '通过' : '拒绝'
   try {
-    await ElMessageBox.confirm(`确定要${actionText}该帖子吗？`, '确认操作', {
+    await ElMessageBox.confirm(`确定要通过该帖子吗？`, '确认操作', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -255,7 +342,7 @@ const handleReview = async (helpPost, action) => {
     const user = getCurrentUser()
     const url = `/api/help/review/${helpPost.id}?username=${user.username}&action=${action}`
     await post(url, null)
-    success(`已${actionText}该帖子`)
+    success('已通过该帖子')
     loadPending()
     loadApproved()
     loadRejected()
@@ -264,7 +351,30 @@ const handleReview = async (helpPost, action) => {
   }
 }
 
+const handleReject = (post) => {
+  rejectingPost.value = post
+  rejectReason.value = ''
+  rejectDialogVisible.value = true
+}
 
+const confirmReject = async () => {
+  if (!rejectReason.value.trim()) {
+    warning('请填写拒绝理由')
+    return
+  }
+  try {
+    const user = getCurrentUser()
+    const url = `/api/help/review/${rejectingPost.value.id}?username=${user.username}&action=reject&reason=${encodeURIComponent(rejectReason.value)}`
+    await post(url, null)
+    success('已拒绝该帖子')
+    rejectDialogVisible.value = false
+    loadPending()
+    loadApproved()
+    loadRejected()
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
+}
 
 const handlePendingPageChange = (page) => {
   pendingPage.value = page
@@ -323,5 +433,9 @@ watch(activeTab, (newTab) => {
   margin-top: 20px;
   display: flex;
   justify-content: center;
+}
+
+.post-detail {
+  padding: 10px;
 }
 </style>

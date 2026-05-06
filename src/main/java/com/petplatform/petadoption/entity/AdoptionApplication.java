@@ -29,6 +29,10 @@ public class AdoptionApplication {
     private LocalDateTime applyTime = LocalDateTime.now();//申请时间
     private LocalDateTime reviewTime;//审核时间
 
+    // 拒绝理由
+    @Column(columnDefinition = "TEXT")
+    private String rejectReason;
+
     private String residenceType; // 居住类型（自有/租房/宿舍）
     private Integer housingArea;  // 住房面积（㎡）
     private String petExperience; // 养宠经验（无/有过/丰富）

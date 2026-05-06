@@ -27,7 +27,7 @@
             <div class="author-meta">
               <div class="name-row">
                 <span class="name">{{ postData.user?.username || '匿名' }}</span>
-                <span class="badge-text">资深救助</span>
+
               </div>
               <span class="time">{{ formatDateTime(postData.createTime) }}</span>
             </div>
@@ -88,24 +88,54 @@
 
     <el-empty v-else description="帖子走丢了" :image-size="150" />
 
-    <!-- 底部固定功能栏（CSDN风格） -->
-    <div v-if="postData" class="bottom-toolbar">
+    <!-- 底部固定功能栏 -->
+    <div class="bottom-toolbar">
       <div class="toolbar-inner">
-        <button class="toolbar-btn" @click="handleLike">
-          <span class="icon">👍</span>
-          <span class="label">点赞 {{ likeCount }}</span>
+        <!-- 点赞按钮 -->
+        <button
+            class="like-button"
+            :class="{ 'is-liked': isLiked }"
+            @click="handleLike"
+        >
+      <span class="like-left">
+        <svg viewBox="0 0 512 512" class="like-icon" xmlns="http://www.w3.org/2000/svg">
+          <path d="M47.6 300.4L228.3 469.1c7.5 7 17.4 10.9 27.7 10.9s20.2-3.9 27.7-10.9L464.4 300.4c30.4-28.3 47.6-68 47.6-109.5v-5.8c0-69.9-50.5-129.5-119.4-141C347 36.5 300.6 51.4 268 84L256 96 244 84c-32.6-32.6-79-47.5-124.6-39.9C50.5 55.6 0 115.2 0 185.1v5.8c0 41.5 17.2 81.2 47.6 109.5z"></path>
+        </svg>
+        <span class="like-text">点赞</span>
+      </span>
+          <span class="like-count">{{ likeCount }}</span>
         </button>
-        <button class="toolbar-btn" @click="handleCollect">
-          <span class="icon">⭐</span>
-          <span class="label">收藏</span>
+
+        <!-- 收藏按钮 -->
+        <button
+            class="favorite-button"
+            :class="{ 'is-favorited': isFavorited }"
+            @click="handleCollect"
+        >
+      <span class="favorite-icon-wrapper">
+        <svg class="favorite-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+                stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+        </svg>
+      </span>
+          <span class="favorite-text">{{ isFavorited ? '已收藏' : '收藏' }}</span>
         </button>
-        <button class="toolbar-btn active" @click="showCommentPanel">
-          <span class="icon">💬</span>
-          <span class="label">评论 {{ totalComments }}</span>
+
+        <!-- 评论按钮 -->
+        <button class="comment-button" @click="showCommentPanel">
+
+          <span class="comment-text">评论</span>
+          <span class="comment-count">{{ totalComments }}</span>
         </button>
-        <button class="toolbar-btn" @click="handleShare">
-          <span class="icon">🔄</span>
-          <span class="label">分享</span>
+
+        <!-- 分享按钮 -->
+        <button class="share-button" @click="handleShare">
+      <span class="share-icon-wrapper">
+        <svg class="share-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
+        </svg>
+      </span>
+          <span class="share-text">分享</span>
         </button>
       </div>
     </div>
@@ -255,11 +285,144 @@ const expandedReplies = ref({})
 // 评论区抽屉状态
 const commentPanelVisible = ref(false)
 
-// 点赞收藏（预留功能）
-const likeCount = ref(27)
-const handleLike = () => { warning('点赞功能开发中') }
-const handleCollect = () => { warning('收藏功能开发中') }
-const handleShare = () => { warning('分享功能开发中') }
+// 点赞收藏状态
+const likeCount = ref(0)
+const isLiked = ref(false)
+const isFavorited = ref(false)
+
+/**
+ * 加载帖子点赞数
+ */
+const loadLikeCount = async () => {
+  if (!postData.value) return
+  try {
+    const data = await get('/api/interaction/like/count', {
+      targetType: 'POST',
+      targetId: postData.value.id
+    })
+    likeCount.value = data.count
+  } catch (err) {
+    console.error('加载点赞数失败:', err)
+  }
+}
+
+/**
+ * 检查当前用户是否已点赞
+ */
+const checkLiked = async () => {
+  if (!isLoggedIn.value || !postData.value) return
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await get('/api/interaction/like/check', {
+      username: user.username,
+      targetType: 'POST',
+      targetId: postData.value.id
+    })
+    isLiked.value = data.liked
+  } catch (err) {
+    console.error('检查点赞状态失败:', err)
+  }
+}
+
+/**
+ * 检查当前用户是否已收藏
+ */
+const checkFavorited = async () => {
+  if (!isLoggedIn.value || !postData.value) return
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await get('/api/interaction/favorite/check', {
+      username: user.username,
+      targetType: 'POST',
+      targetId: postData.value.id
+    })
+    isFavorited.value = data.favorited
+  } catch (err) {
+    console.error('检查收藏状态失败:', err)
+  }
+}
+
+/**
+ * 处理点赞操作
+ */
+const handleLike = async () => {
+  if (!isLoggedIn.value) {
+    warning('请先登录后再点赞')
+    triggerLogin()
+    return
+  }
+
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await post('/api/interaction/like/toggle', {
+      username: user.username,
+      targetType: 'POST',
+      targetId: postData.value.id
+    })
+
+    isLiked.value = data.liked
+    likeCount.value = data.count
+
+    if (isLiked.value) {
+      success('已点赞')
+    } else {
+      success('已取消点赞')
+    }
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
+}
+
+/**
+ * 处理收藏操作
+ */
+const handleCollect = async () => {
+  if (!isLoggedIn.value) {
+    warning('请先登录后再收藏')
+    triggerLogin()
+    return
+  }
+
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await post('/api/interaction/favorite/toggle', {
+      username: user.username,
+      targetType: 'POST',
+      targetId: postData.value.id
+    })
+
+    isFavorited.value = data.favorited
+
+    if (isFavorited.value) {
+      success('收藏成功')
+    } else {
+      success('已取消收藏')
+    }
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
+}
+
+/**
+ * 处理分享操作 - 复制链接到剪贴板
+ */
+const handleShare = () => {
+  const url = window.location.href
+  navigator.clipboard.writeText(url).then(() => {
+    success('链接已复制到剪贴板，快去分享吧！')
+  }).catch(() => {
+    warning('复制失败，请手动复制链接')
+  })
+}
+
 
 // 计算预览图片列表
 const previewPostImageList = computed(() => {
@@ -287,9 +450,13 @@ const checkLoginStatus = () => {
   const wasLoggedIn = isLoggedIn.value
   isLoggedIn.value = !!localStorage.getItem('user')
 
-  // 如果从未登录变为已登录，重新加载评论区
+  // 如果从未登录变为已登录，重新加载评论区和互动状态
   if (!wasLoggedIn && isLoggedIn.value) {
     loadComments()
+    if (postData.value) {
+      checkLiked()
+      checkFavorited()
+    }
   }
 }
 
@@ -356,6 +523,12 @@ const loadPostDetail = async () => {
         postImages.value = [postData.value.photoUrls]
       }
     }
+
+    // 检查登录状态并加载互动数据
+    checkLoginStatus()
+    await loadLikeCount()
+    await checkLiked()
+    await checkFavorited()
   } catch (err) {
     error('加载失败')
   } finally {
@@ -447,7 +620,10 @@ const goBack = () => {
 
 const goToPetDetail = () => {
   if (postData.value?.relatedPet)
-    router.push(`/pet/${postData.value.relatedPet.id}`)
+    router.push({
+      path: `/pet/${postData.value.relatedPet.id}`,
+      query: { fromPostId: postData.value.id }
+    })
 }
 
 // 评论区抽屉控制
@@ -462,12 +638,19 @@ const closeCommentPanel = () => {
 }
 
 onMounted(() => {
-  checkLoginStatus()
   loadPostDetail()
   loadComments()
 
-  // 监听 localStorage 变化
-  window.addEventListener('storage', handleStorageChange)
+  // 监听登录状态变化
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'user') {
+      checkLoginStatus()
+      if (isLoggedIn.value && postData.value) {
+        checkLiked()
+        checkFavorited()
+      }
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -711,7 +894,7 @@ onUnmounted(() => {
 .pet-desc { font-size: 12px; color: #999; }
 .arrow { color: #ccc; font-size: 18px; }
 
-/* ========== 底部固定工具栏（CSDN风格） ========== */
+/* ========== 底部固定工具栏 ========== */
 .bottom-toolbar {
   position: fixed;
   bottom: 0;
@@ -722,6 +905,7 @@ onUnmounted(() => {
   box-shadow: 0 -2px 12px rgba(0,0,0,0.06);
   z-index: 999;
 }
+
 .toolbar-inner {
   max-width: 800px;
   margin: 0 auto;
@@ -729,31 +913,300 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-around;
   align-items: center;
+  gap: 12px;
 }
-.toolbar-btn {
-  background: none;
-  border: none;
-  padding: 8px 20px;
-  border-radius: 24px;
-  cursor: pointer;
+
+/* 点赞按钮样式 */
+.like-button {
+  width: 140px;
+  height: 38px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: all 0.2s;
-  color: #666;
+  border: none;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  background-color: transparent;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.like-button .like-left {
+  width: 65%;
+  height: 100%;
+  background: linear-gradient(135deg, #E07A5F 0%, #F2CC8F 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.3s ease;
+}
+
+.like-button .like-icon {
+  width: 18px;
+  height: 18px;
+  fill: white;
+  transition: transform 0.2s ease;
+}
+
+.like-button .like-text {
+  color: white;
+  font-weight: 600;
   font-size: 14px;
 }
-.toolbar-btn:hover {
-  background: #f5f6f7;
-  color: #E07A5F;
-}
-.toolbar-btn.active {
-  background: rgba(224, 122, 95, 0.1);
+
+.like-button .like-count {
+  width: 35%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #E07A5F;
   font-weight: 600;
+  font-size: 14px;
+  position: relative;
+  background-color: white;
 }
-.toolbar-btn .icon { font-size: 18px; }
-.toolbar-btn .label { font-size: 14px; }
+
+.like-button .like-count::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  width: 12px;
+  height: 12px;
+  background-color: white;
+  transform: rotate(45deg);
+}
+
+.like-button:hover .like-left {
+  background: linear-gradient(135deg, #d4694f 0%, #e5b87a 100%);
+}
+
+.like-button:active .like-left .like-icon {
+  transform: scale(1.2);
+  transform-origin: center;
+}
+
+/* 点赞激活状态 */
+.like-button.is-liked .like-left {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+}
+
+.like-button.is-liked .like-count {
+  color: #ff6b6b;
+}
+
+/* 收藏按钮样式 */
+.favorite-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 25px;
+  border: 2px solid #F2CC8F;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.favorite-button .favorite-icon-wrapper {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.favorite-button .favorite-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #F2CC8F;
+  fill: none;
+  transition: all 0.5s ease;
+}
+
+.favorite-button .favorite-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: #F2CC8F;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.favorite-button:hover {
+  border-color: #e5b87a;
+  background: linear-gradient(135deg, rgba(242, 204, 143, 0.1) 0%, rgba(224, 122, 95, 0.05) 100%);
+}
+
+.favorite-button:hover .favorite-icon {
+  stroke: #e5b87a;
+  transform: scale(1.1);
+}
+
+/* 收藏激活状态 */
+.favorite-button.is-favorited {
+  border-color: #F2CC8F;
+  background: linear-gradient(135deg, #F2CC8F 0%, #e5b87a 100%);
+}
+
+.favorite-button.is-favorited .favorite-icon {
+  stroke: white;
+  fill: white;
+  animation: favoritePop 0.5s ease;
+}
+
+.favorite-button.is-favorited .favorite-text {
+  color: white;
+}
+
+@keyframes favoritePop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 评论按钮样式 */
+.comment-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 25px;
+  border: 2px solid #999;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.comment-button .comment-icon {
+  font-size: 18px;
+}
+
+.comment-button .comment-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.comment-button .comment-count {
+  font-size: 13px;
+  color: #999;
+  font-weight: 600;
+}
+
+.comment-button:hover {
+  border-color: #E07A5F;
+  background: linear-gradient(135deg, rgba(224, 122, 95, 0.08) 0%, rgba(242, 204, 143, 0.05) 100%);
+}
+
+.comment-button:hover .comment-text {
+  color: #E07A5F;
+}
+
+/* 分享按钮样式 */
+.share-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 25px;
+  border: 2px solid #999;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.share-button .share-icon-wrapper {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-button .share-icon {
+  width: 18px;
+  height: 18px;
+  fill: #999;
+  transition: all 0.3s ease;
+}
+
+.share-button .share-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.share-button:hover {
+  border-color: #66BB6A;
+  background: linear-gradient(135deg, rgba(102, 187, 106, 0.08) 0%, rgba(129, 199, 132, 0.05) 100%);
+}
+
+.share-button:hover .share-icon {
+  fill: #66BB6A;
+  transform: rotate(-15deg) scale(1.1);
+}
+
+.share-button:active {
+  transform: scale(0.95);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .toolbar-inner {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .like-button {
+    width: 120px;
+    height: 34px;
+  }
+
+  .like-button .like-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .like-button .like-text,
+  .like-button .like-count {
+    font-size: 12px;
+  }
+
+  .favorite-button,
+  .comment-button,
+  .share-button {
+    padding: 8px 14px;
+  }
+
+  .favorite-button .favorite-icon,
+  .share-button .share-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .favorite-button .favorite-text,
+  .comment-button .comment-text,
+  .share-button .share-text {
+    font-size: 12px;
+  }
+}
+
 
 /* ========== 右侧抽屉评论区 ========== */
 .comment-drawer {

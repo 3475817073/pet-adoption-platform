@@ -41,6 +41,10 @@ public class Pet {
     @Enumerated(EnumType.STRING)
     private PostStatus reviewStatus = PostStatus.PENDING;//默认待审核
 
+    // 拒绝理由
+    @Column(columnDefinition = "TEXT")
+    private String rejectReason;
+
     @ManyToOne
     @JoinColumn(name = "rescuer_id")
     private User rescuer;//宠物发布者

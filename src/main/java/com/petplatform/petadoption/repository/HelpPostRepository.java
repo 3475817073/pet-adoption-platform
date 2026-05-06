@@ -42,4 +42,12 @@ public interface HelpPostRepository extends JpaRepository<HelpPost, Long> {
     long countByRelatedPet_TypeAndStatus(String petType, PostStatus status);
 
 
+    /**
+     * 分页查询指定用户的帖子，按创建时间倒序
+     * 用于个人中心展示用户发布的互助帖
+     */
+    Page<HelpPost> findByUserIdOrderByCreateTimeDesc(Long userId, Pageable pageable);
+
+
+
 }

@@ -83,6 +83,19 @@
             <el-tag v-if="pet.status === 'ADOPTED'" class="status-tag adopted">已找到家 🏠</el-tag>
             <el-tag v-else class="status-tag available">等待领养 </el-tag>
 
+            <!-- 收藏按钮 -->
+            <button
+                class="floating-favorite-btn"
+                :class="{ 'is-favorited': pet.isFavorited }"
+                @click.stop="toggleFavoritePet(pet)"
+                title="收藏"
+            >
+              <svg class="favorite-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+                      stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+              </svg>
+            </button>
+
             <!-- 悬浮遮罩 -->
             <div class="hover-overlay">
               <el-button type="primary" size="large" class="view-btn">查看详情</el-button>
@@ -106,8 +119,6 @@
             </div>
 
             <p class="description">{{ pet.description }}</p>
-
-
 
             <el-button type="primary" class="adopt-btn" :disabled="pet.status === 'ADOPTED'" @click="applyAdopt(pet)">
               {{ pet.status === 'ADOPTED' ? '已被领养' : '我要领养' }}
@@ -158,8 +169,9 @@
 import { ref, onMounted, watch, inject, nextTick, onActivated } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AdoptionApply from './AdoptionApply.vue'
-import { get } from '../utils/request.js'
+import { get, post } from '../utils/request.js'
 import { success, warning, error, info } from '../utils/message.js'
+
 
 const router = useRouter()
 const route = useRoute()
@@ -202,12 +214,16 @@ const loadPets = async () => {
     const data = await get('/api/pet/list', params)
     pets.value = data.content
     total.value = data.totalElements
+
+    // 加载宠物的收藏状态
+    await loadFavoritesStatus()
   } catch (err) {
     error(err.message || '获取宠物列表失败')
   } finally {
     loading.value = false
   }
 }
+
 
 /**
  * 组件挂载时执行：初始化加载宠物列表
@@ -419,10 +435,76 @@ const filterByType = (type) => {
  * 领养申请成功回调
  */
 const onApplySuccess = () => {
-  success('领养申请已提交！请等待管理员审核')
+  //success('领养申请已提交！请等待管理员审核')
 }
 
+/**
+ * 切换宠物收藏状态
+ */
+const toggleFavoritePet = async (pet) => {
+  // 检查登录状态
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    warning('请先登录后再收藏')
+    triggerLogin()
+    return
+  }
 
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await post('/api/interaction/favorite/toggle', {
+      username: user.username,
+      targetType: 'PET',
+      targetId: pet.id
+    })
+
+    // 更新本地状态
+    pet.isFavorited = data.favorited
+
+    if (data.favorited) {
+      success('收藏成功')
+    } else {
+      success('已取消收藏')
+    }
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
+}
+
+/**
+ * 加载宠物收藏状态
+ */
+const loadFavoritesStatus = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+
+  const user = JSON.parse(userStr)
+
+  try {
+    // 获取用户的收藏列表
+    const data = await get('/api/interaction/favorites', {
+      username: user.username,
+      page: 0,
+      size: 100
+    })
+
+    // 标记已收藏的宠物
+    const favoritePetIds = new Set()
+    data.content.forEach(fav => {
+      if (fav.targetType === 'PET') {
+        favoritePetIds.add(fav.targetId)
+      }
+    })
+
+    // 更新宠物列表的收藏状态
+    pets.value.forEach(pet => {
+      pet.isFavorited = favoritePetIds.has(pet.id)
+    })
+  } catch (err) {
+    console.error('加载收藏状态失败:', err)
+  }
+}
 
 </script>
 
@@ -655,7 +737,68 @@ const onApplySuccess = () => {
   border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
-/* ===== 悬浮遮罩 ===== */
+/* 悬浮收藏按钮*/
+.floating-favorite-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 3;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.floating-favorite-btn .favorite-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #F2CC8F;
+  fill: none;
+  transition: all 0.4s ease;
+}
+
+.floating-favorite-btn:hover {
+  background: white;
+  border-color: #F2CC8F;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(242, 204, 143, 0.4);
+}
+
+.floating-favorite-btn:hover .favorite-icon {
+  stroke: #e5b87a;
+  transform: scale(1.15);
+}
+
+/* 已收藏状态 */
+.floating-favorite-btn.is-favorited {
+  background: linear-gradient(135deg, #F2CC8F 0%, #e5b87a 100%);
+  border-color: #F2CC8F;
+}
+
+.floating-favorite-btn.is-favorited .favorite-icon {
+  stroke: white;
+  fill: white;
+  animation: floatingFavPop 0.5s ease;
+}
+
+@keyframes floatingFavPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+.floating-favorite-btn.is-favorited:hover {
+  background: linear-gradient(135deg, #e5b87a 0%, #d4a568 100%);
+}
+
 .hover-overlay {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -762,7 +905,23 @@ const onApplySuccess = () => {
   flex-shrink: 0;
 }
 
-/* ===== 我要领养按钮 - 自动推到底部 ===== */
+
+/* 描述文本 - 固定高度 */
+.description {
+  margin: 0 0 16px 0;
+  color: #4b5563;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 14px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+
+/* ===== 我要领养按钮 ===== */
 .adopt-btn {
   width: 100%;
   margin-top: auto;

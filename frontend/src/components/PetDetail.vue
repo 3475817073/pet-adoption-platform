@@ -4,9 +4,15 @@
     <div class="detail-nav">
       <button class="back-btn" @click="goBack">
         <span class="back-icon">←</span>
-        <span>返回宠物列表</span>
+        <span>{{ fromPostId ? '返回帖子' : '返回宠物列表' }}</span>
       </button>
       <span class="nav-breadcrumb">宠物列表 / 详情</span>
+
+      <!-- 来自帖子的醒目提示 -->
+      <div v-if="fromPostId" class="back-to-post-hint">
+        <span class="hint-icon">💬</span>
+        正在查看帖子关联的宠物
+      </div>
     </div>
 
     <!-- 加载状态 -->
@@ -207,6 +213,8 @@ const loading = ref(true)
 const currentPhotoIndex = ref(0)
 const applyDialogVisible = ref(false)
 
+const fromPostId = ref(null)
+
 const relatedPosts = ref([])
 const relatedPostsLoading = ref(false)
 
@@ -238,6 +246,9 @@ const loadPetDetail = async () => {
 
     pet.value = response
     currentPhotoIndex.value = 0
+
+    // 获取来源帖子 ID
+    fromPostId.value = route.query.fromPostId || null
 
     // 加载相关讨论
     await loadRelatedPosts()
@@ -281,18 +292,23 @@ const nextPhoto = () => {
 
 // 返回上一页，保持分页状态
 const goBack = () => {
-  // 获取当前滚动位置（详情页的）
+  // 如果来自帖子，直接返回帖子
+  if (fromPostId.value) {
+    router.push({
+      path: `/post/${fromPostId.value}`
+    })
+    return
+  }
+
+  // 否则返回宠物列表，保持分页状态
   const currentScrollY = window.scrollY || document.documentElement.scrollTop
   console.log('Saving detail page scroll:', currentScrollY)
 
-  // 但我们需要的是列表页的滚动位置，这个位置应该在点击卡片时就保存了
-  // 获取详情页URL中的分页参数
   const page = route.query.page || 1
   const size = route.query.size || 12
 
   console.log('Navigating back to pets list with page:', page, 'size:', size)
 
-  // 跳转到宠物列表页，携带分页参数
   router.push({
     path: '/pets',
     query: { page, size }

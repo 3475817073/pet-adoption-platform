@@ -185,8 +185,13 @@ public class PetController {
             if (request.get("photoUrl") != null) pet.setPhotoUrl((String) request.get("photoUrl"));
             if (request.get("photoUrls") != null) pet.setPhotoUrls((String) request.get("photoUrls"));
 
+            // 修改后需要重新审核
+            if (pet.getReviewStatus() == com.petplatform.petadoption.entity.PostStatus.APPROVED) {
+                pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
+            }
+
             petService.save(pet);
-            return ResponseEntity.ok("修改成功");
+            return ResponseEntity.ok("修改成功，请等待管理员重新审核");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("修改失败：" + e.getMessage());
         }
@@ -321,7 +326,8 @@ public class PetController {
     public ResponseEntity<?> reviewPet(
             @PathVariable Long petId,
             @RequestParam String username,
-            @RequestParam String action) {
+            @RequestParam String action,
+            @RequestParam(required = false) String reason) {
         try {
             User admin = userService.findByUsername(username);
             if (admin == null) {
@@ -344,6 +350,9 @@ public class PetController {
                 pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.APPROVED);
             } else if ("reject".equals(action)) {
                 pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.REJECTED);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    pet.setRejectReason(reason);
+                }
             } else {
                 return ResponseEntity.badRequest().body("无效的操作");
             }

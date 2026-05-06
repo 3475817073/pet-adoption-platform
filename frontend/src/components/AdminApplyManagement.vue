@@ -31,10 +31,11 @@
               {{ formatTime(row.applyTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200">
+          <el-table-column label="操作" width="280">
             <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
               <el-button type="success" size="small" @click="review(row.id, 'approve')">通过</el-button>
-              <el-button type="danger" size="small" @click="review(row.id, 'reject')">拒绝</el-button>
+              <el-button type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -99,7 +100,7 @@
                     @click="viewVisitHistory(row)"
                     style="background: linear-gradient(135deg, #81B29A 0%, #F2CC8F 100%); border: none; color: white"
                 >
-                  📋 回访历史
+                  回访历史
                 </el-button>
               </div>
             </template>
@@ -166,14 +167,88 @@
       </el-tab-pane>
     </el-tabs>
 
+    <!-- 申请详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="领养申请详细信息" width="800px">
+      <div v-if="currentApplication" class="application-detail">
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <h4 style="margin-bottom: 15px; color: #666"> 申请人信息</h4>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="用户名">{{ currentApplication.adopter.username }}</el-descriptions-item>
+              <el-descriptions-item label="联系方式">{{ currentApplication.contact }}</el-descriptions-item>
+              <el-descriptions-item label="居住类型">{{ currentApplication.residenceType || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="住房面积">{{ currentApplication.housingArea ? currentApplication.housingArea + '㎡' : '-' }}</el-descriptions-item>
+              <el-descriptions-item label="养宠经验">{{ currentApplication.petExperience || '-' }}</el-descriptions-item>
+              <el-descriptions-item label="是否有其他宠物">{{ currentApplication.hasOtherPets ? '是' : '否' }}</el-descriptions-item>
+              <el-descriptions-item v-if="currentApplication.otherPetsInfo" label="其他宠物信息">{{ currentApplication.otherPetsInfo }}</el-descriptions-item>
+            </el-descriptions>
+          </el-col>
+          <el-col :span="12">
+            <h4 style="margin-bottom: 15px; color: #666"> 宠物信息</h4>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="宠物名称">{{ currentApplication.pet.name }}</el-descriptions-item>
+              <el-descriptions-item label="宠物种类">{{ currentApplication.pet.type }}</el-descriptions-item>
+              <el-descriptions-item label="性别">{{ currentApplication.pet.gender || '未知' }}</el-descriptions-item>
+              <el-descriptions-item label="年龄">{{ currentApplication.pet.age }}岁</el-descriptions-item>
+              <el-descriptions-item label="健康状态">
+                <el-tag v-if="currentApplication.pet.vaccinated" type="success" size="small">已疫苗</el-tag>
+                <el-tag v-else type="info" size="small">未疫苗</el-tag>
+                <el-tag v-if="currentApplication.pet.neutered" type="success" size="small" style="margin-left: 8px">已绝育</el-tag>
+                <el-tag v-else type="info" size="small" style="margin-left: 8px">未绝育</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="发布者">{{ currentApplication.pet.rescuer?.username }}</el-descriptions-item>
+            </el-descriptions>
+          </el-col>
+        </el-row>
+
+        <div style="margin-top: 20px">
+          <h4 style="margin-bottom: 10px; color: #666"> 领养理由</h4>
+          <div style="padding: 15px; background-color: #f9f9f9; border-radius: 8px; line-height: 1.8">
+            {{ currentApplication.reason }}
+          </div>
+        </div>
+
+        <div style="margin-top: 15px">
+          <h4 style="margin-bottom: 10px; color: #666"> 家庭情况</h4>
+          <div style="padding: 15px; background-color: #f9f9f9; border-radius: 8px; line-height: 1.8">
+            {{ currentApplication.familySituation || '未填写' }}
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 拒绝理由对话框 -->
+    <el-dialog v-model="rejectDialogVisible" title="拒绝领养申请" width="500px">
+      <el-form label-width="100px">
+        <el-form-item label="申请人">
+          <span>{{ currentApplication?.adopter?.username }}</span>
+        </el-form-item>
+        <el-form-item label="申请宠物">
+          <span>{{ currentApplication?.pet?.name }}</span>
+        </el-form-item>
+        <el-form-item label="拒绝理由" required>
+          <el-input
+              v-model="rejectReason"
+              type="textarea"
+              :rows="4"
+              placeholder="请填写拒绝理由，该理由将展示给用户..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmReject" :disabled="!rejectReason.trim()">确认拒绝</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 添加回访记录弹窗 -->
     <el-dialog v-model="visitDialogVisible" :title="`添加回访记录 - ${currentApplication?.pet?.name || ''}`" width="650px">
       <el-form :model="visitForm" label-width="120px" class="visit-form">
         <el-form-item label="回访方式" required>
           <el-radio-group v-model="visitForm.visitType">
             <el-radio label="PHONE"> 电话回访</el-radio>
-            <el-radio label="ON_SITE">🏠 上门回访</el-radio>
-            <el-radio label="ONLINE">💬 在线回访</el-radio>
+            <el-radio label="ON_SITE"> 上门回访</el-radio>
+            <el-radio label="ONLINE"> 在线回访</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -191,7 +266,7 @@
         <el-form-item label="宠物状态" required>
           <el-radio-group v-model="visitForm.petStatus">
             <el-radio label="HEALTHY">✅ 适应良好</el-radio>
-            <el-radio label="ADAPTING">⚠️ 适应中</el-radio>
+            <el-radio label="ADAPTING">️ 适应中</el-radio>
             <el-radio label="ISSUES"> 存在问题</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -264,16 +339,16 @@
               </span>
             </div>
             <div v-if="record.content" style="margin-top: 12px">
-              <div style="color: #666; font-size: 13px; margin-bottom: 5px">📝 回访内容：</div>
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px"> 回访内容：</div>
               <div style="color: #333; line-height: 1.6">{{ record.content }}</div>
             </div>
             <div v-if="record.feedback" style="margin-top: 12px">
-              <div style="color: #666; font-size: 13px; margin-bottom: 5px">💬 领养者反馈：</div>
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px"> 领养者反馈：</div>
               <div style="color: #333; line-height: 1.6">{{ record.feedback }}</div>
             </div>
             <div v-if="record.needFollowUp && record.nextVisitTime" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd">
               <span style="color: #E07A5F; font-size: 13px">
-                📅 下次回访：{{ formatDate(record.nextVisitTime) }}
+                 下次回访：{{ formatDate(record.nextVisitTime) }}
               </span>
             </div>
             <div style="margin-top: 12px; text-align: right">
@@ -320,6 +395,14 @@ const currentApplication = ref(null)
 const visitHistory = ref([])
 const submitting = ref(false)
 
+// 详情对话框
+const detailDialogVisible = ref(false)
+
+// 拒绝对话框
+const rejectDialogVisible = ref(false)
+const rejectReason = ref('')
+const rejectingApplication = ref(null)
+
 const visitForm = ref({
   visitType: 'PHONE',
   visitTime: '',
@@ -350,7 +433,7 @@ const getVisitTypeText = (type) => {
   const map = {
     'PHONE': ' 电话回访',
     'ON_SITE': ' 上门回访',
-    'ONLINE': '💬 在线回访'
+    'ONLINE': ' 在线回访'
   }
   return map[type] || type
 }
@@ -367,7 +450,7 @@ const getVisitTypeTag = (type) => {
 const getPetStatusText = (status) => {
   const map = {
     'HEALTHY': '✅ 适应良好',
-    'ADAPTING': '⚠️ 适应中',
+    'ADAPTING': '️ 适应中',
     'ISSUES': ' 存在问题'
   }
   return map[status] || status
@@ -466,6 +549,11 @@ const handleRejectedSizeChange = (size) => {
   loadRejected()
 }
 
+const viewDetail = (application) => {
+  currentApplication.value = application
+  detailDialogVisible.value = true
+}
+
 const review = (applicationId, action) => {
   const text = action === 'approve' ? '通过' : '拒绝'
   ElMessageBox.confirm(`确定要${text}这条申请吗？`, '提示', {
@@ -484,6 +572,30 @@ const review = (applicationId, action) => {
       error(err.message || '操作失败')
     }
   }).catch(() => {})
+}
+
+const handleReject = (application) => {
+  rejectingApplication.value = application
+  rejectReason.value = ''
+  rejectDialogVisible.value = true
+}
+
+const confirmReject = async () => {
+  if (!rejectReason.value.trim()) {
+    warning('请填写拒绝理由')
+    return
+  }
+  try {
+    const url = `/api/adoption/review/${rejectingApplication.value.id}?username=${currentUser.value.username}&action=reject&reason=${encodeURIComponent(rejectReason.value)}`
+    await post(url, {})
+    success('已拒绝该申请')
+    rejectDialogVisible.value = false
+    loadPending()
+    loadApproved()
+    loadRejected()
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
 }
 
 const showVisitDialog = async (application) => {
@@ -670,5 +782,9 @@ watch(activeTab, (newTab) => {
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.application-detail {
+  padding: 10px;
 }
 </style>

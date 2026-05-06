@@ -9,13 +9,8 @@
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="宠物图片" width="120">
             <template #default="{ row }">
-              <img
-                  v-if="getPetImageUrl(row)"
-                  :src="getPetImageUrl(row)"
-                  style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px"
-              />
-              <div v-else style="width: 80px; height: 80px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 8px">
-                🐾
+              <div class="pet-thumb" :style="{ backgroundImage: getPetImageUrl(row) ? `url(${getPetImageUrl(row)})` : '' }">
+                <span v-if="!getPetImageUrl(row)" class="pet-thumb-placeholder"></span>
               </div>
             </template>
           </el-table-column>
@@ -36,10 +31,11 @@
               {{ formatTime(row.createTime) }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
               <el-button type="success" size="small" @click="handleReview(row, 'approve')">通过</el-button>
-              <el-button type="danger" size="small" @click="handleReview(row, 'reject')">拒绝</el-button>
+              <el-button type="danger" size="small" @click="handleReject(row)">拒绝</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -65,13 +61,8 @@
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="宠物图片" width="120">
             <template #default="{ row }">
-              <img
-                  v-if="getPetImageUrl(row)"
-                  :src="getPetImageUrl(row)"
-                  style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px"
-              />
-              <div v-else style="width: 80px; height: 80px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 8px">
-                🐾
+              <div class="pet-thumb" :style="{ backgroundImage: getPetImageUrl(row) ? `url(${getPetImageUrl(row)})` : '' }">
+                <span v-if="!getPetImageUrl(row)" class="pet-thumb-placeholder"></span>
               </div>
             </template>
           </el-table-column>
@@ -89,6 +80,11 @@
           <el-table-column prop="createTime" label="发布时间" width="180">
             <template #default="{ row }">
               {{ formatTime(row.createTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -113,13 +109,8 @@
           <el-table-column prop="id" label="ID" width="80" />
           <el-table-column label="宠物图片" width="120">
             <template #default="{ row }">
-              <img
-                  v-if="getPetImageUrl(row)"
-                  :src="getPetImageUrl(row)"
-                  style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px"
-              />
-              <div v-else style="width: 80px; height: 80px; background: #f5f5f5; display: flex; align-items: center; justify-content: center; border-radius: 8px">
-                🐾
+              <div class="pet-thumb" :style="{ backgroundImage: getPetImageUrl(row) ? `url(${getPetImageUrl(row)})` : '' }">
+                <span v-if="!getPetImageUrl(row)" class="pet-thumb-placeholder"></span>
               </div>
             </template>
           </el-table-column>
@@ -139,6 +130,11 @@
               {{ formatTime(row.createTime) }}
             </template>
           </el-table-column>
+          <el-table-column label="操作" width="120" fixed="right">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewDetail(row)">查看详情</el-button>
+            </template>
+          </el-table-column>
         </el-table>
 
         <div class="pagination-wrapper">
@@ -155,6 +151,58 @@
         </div>
       </el-tab-pane>
     </el-tabs>
+
+    <!-- 宠物详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="宠物详细信息" width="800px">
+      <div v-if="currentPet" class="pet-detail">
+        <el-row :gutter="20">
+          <el-col :span="10">
+            <div class="pet-image-container">
+              <div v-if="getPetImageUrl(currentPet)" class="pet-detail-image" :style="{ backgroundImage: `url(${getPetImageUrl(currentPet)})` }"></div>
+              <div v-else class="pet-detail-no-image"></div>
+            </div>
+          </el-col>
+          <el-col :span="14">
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="宠物名称">{{ currentPet.name }}</el-descriptions-item>
+              <el-descriptions-item label="种类">{{ currentPet.type }}</el-descriptions-item>
+              <el-descriptions-item label="性别">{{ currentPet.gender || '未知' }}</el-descriptions-item>
+              <el-descriptions-item label="年龄">{{ currentPet.age }}岁</el-descriptions-item>
+              <el-descriptions-item label="健康状态">
+                <el-tag v-if="currentPet.vaccinated" type="success" size="small">已疫苗</el-tag>
+                <el-tag v-else type="info" size="small">未疫苗</el-tag>
+                <el-tag v-if="currentPet.neutered" type="success" size="small" style="margin-left: 8px">已绝育</el-tag>
+                <el-tag v-else type="info" size="small" style="margin-left: 8px">未绝育</el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item label="发布者">{{ currentPet.rescuer?.username }}</el-descriptions-item>
+              <el-descriptions-item label="发布时间">{{ formatTime(currentPet.createTime) }}</el-descriptions-item>
+              <el-descriptions-item label="详细描述">{{ currentPet.description }}</el-descriptions-item>
+            </el-descriptions>
+          </el-col>
+        </el-row>
+      </div>
+    </el-dialog>
+
+    <!-- 拒绝理由对话框 -->
+    <el-dialog v-model="rejectDialogVisible" title="拒绝宠物发布" width="500px">
+      <el-form label-width="100px">
+        <el-form-item label="宠物名称">
+          <span>{{ currentPet?.name }}</span>
+        </el-form-item>
+        <el-form-item label="拒绝理由" required>
+          <el-input
+              v-model="rejectReason"
+              type="textarea"
+              :rows="4"
+              placeholder="请填写拒绝理由，该理由将展示给用户..."
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmReject" :disabled="!rejectReason.trim()">确认拒绝</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -187,6 +235,15 @@ const rejectedLoading = ref(false)
 const rejectedPage = ref(1)
 const rejectedPageSize = ref(10)
 const rejectedTotal = ref(0)
+
+// 详情对话框
+const detailDialogVisible = ref(false)
+const currentPet = ref(null)
+
+// 拒绝对话框
+const rejectDialogVisible = ref(false)
+const rejectReason = ref('')
+const rejectingPet = ref(null)
 
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
@@ -267,11 +324,14 @@ const loadRejected = async () => {
   }
 }
 
+const viewDetail = (pet) => {
+  currentPet.value = pet
+  detailDialogVisible.value = true
+}
 
 const handleReview = async (pet, action) => {
-  const actionText = action === 'approve' ? '通过' : '拒绝'
   try {
-    await ElMessageBox.confirm(`确定要${actionText}该宠物吗？`, '确认操作', {
+    await ElMessageBox.confirm(`确定要通过该宠物吗？`, '确认操作', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning'
@@ -283,7 +343,7 @@ const handleReview = async (pet, action) => {
     const user = getCurrentUser()
     const url = `/api/pet/review/${pet.id}?username=${user.username}&action=${action}`
     await post(url, null)
-    success(`已${actionText}该宠物`)
+    success('已通过该宠物')
     loadPending()
     loadApproved()
     loadRejected()
@@ -292,7 +352,30 @@ const handleReview = async (pet, action) => {
   }
 }
 
+const handleReject = (pet) => {
+  rejectingPet.value = pet
+  rejectReason.value = ''
+  rejectDialogVisible.value = true
+}
 
+const confirmReject = async () => {
+  if (!rejectReason.value.trim()) {
+    warning('请填写拒绝理由')
+    return
+  }
+  try {
+    const user = getCurrentUser()
+    const url = `/api/pet/review/${rejectingPet.value.id}?username=${user.username}&action=reject&reason=${encodeURIComponent(rejectReason.value)}`
+    await post(url, null)
+    success('已拒绝该宠物')
+    rejectDialogVisible.value = false
+    loadPending()
+    loadApproved()
+    loadRejected()
+  } catch (err) {
+    error(err.message || '操作失败')
+  }
+}
 
 const handlePendingPageChange = (page) => {
   pendingPage.value = page
@@ -351,5 +434,52 @@ watch(activeTab, (newTab) => {
   margin-top: 20px;
   display: flex;
   justify-content: center;
+}
+
+.pet-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.pet-thumb-placeholder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/pets-banner.png') center/cover no-repeat;
+  background-color: #f3f4f6;
+}
+
+.pet-detail {
+  padding: 10px;
+}
+
+.pet-image-container {
+  width: 100%;
+  height: 300px;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: #f5f5f5;
+}
+
+.pet-detail-image {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.pet-detail-no-image {
+  width: 100%;
+  height: 100%;
+  background: url('@/assets/pets-banner.png') center/cover no-repeat;
+  background-color: #f3f4f6;
 }
 </style>

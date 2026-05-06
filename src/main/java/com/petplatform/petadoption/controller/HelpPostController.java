@@ -52,7 +52,22 @@ public class HelpPostController {
         }
     }
 
-
+    /**
+     * 查询当前用户发布的帖子列表（分页）
+     * 用于个人中心展示用户自己发布的互助帖
+     */
+    @GetMapping("/my-posts")
+    public ResponseEntity<Page<HelpPost>> getMyPosts(
+            @RequestParam String username,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        User user = userService.findByUsername(username);
+        if (user == null) {
+            return ResponseEntity.badRequest().body(null);
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
+        return ResponseEntity.ok(helpPostService.findByUserPage(user.getId(), pageable));
+    }
 
     /**
      * 发布新的互助帖子（支持城市和照片）
@@ -129,6 +144,87 @@ public class HelpPostController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.badRequest().body("发布失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 编辑互助帖子
+     * 仅允许帖子发布者本人修改，修改后需重新审核
+     */
+    @PutMapping("/post/{postId}")
+    public ResponseEntity<?> updatePost(
+            @PathVariable Long postId,
+            @RequestBody Map<String, Object> request) {
+        try {
+            // 校验操作者身份
+            String username = (String) request.get("username");
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 校验帖子是否存在
+            HelpPost post = helpPostService.findById(postId);
+            if (post == null) {
+                return ResponseEntity.badRequest().body("帖子不存在");
+            }
+
+            // 权限校验：仅发布者有权修改
+            if (!post.getUser().getId().equals(user.getId())) {
+                return ResponseEntity.badRequest().body("无权限修改");
+            }
+
+            // 按需更新帖子各属性
+            if (request.get("title") != null) {
+                String title = ((String) request.get("title")).trim();
+                if (title.isEmpty()) {
+                    return ResponseEntity.badRequest().body("标题不能为空");
+                }
+                post.setTitle(title);
+            }
+
+            if (request.get("content") != null) {
+                String content = ((String) request.get("content")).trim();
+                if (content.isEmpty()) {
+                    return ResponseEntity.badRequest().body("内容不能为空");
+                }
+                post.setContent(content);
+            }
+
+            if (request.get("category") != null) {
+                String category = ((String) request.get("category")).trim();
+                if (category.isEmpty()) {
+                    return ResponseEntity.badRequest().body("分类不能为空");
+                }
+                post.setCategory(category);
+            }
+
+            // 更新城市
+            if (request.get("city") != null) {
+                String city = request.get("city").toString().trim();
+                if (!city.isEmpty() && !"null".equals(city)) {
+                    post.setCity(city);
+                }
+            }
+
+            // 更新照片
+            if (request.get("photoUrls") != null) {
+                String photoUrls = request.get("photoUrls").toString();
+                if (!photoUrls.trim().isEmpty() && !"null".equals(photoUrls)) {
+                    post.setPhotoUrls(photoUrls);
+                }
+            }
+
+            // 修改后需要重新审核（仅限已通过的帖子）
+            if (post.getStatus() == com.petplatform.petadoption.entity.PostStatus.APPROVED) {
+                post.setStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
+            }
+
+            helpPostService.save(post);
+            return ResponseEntity.ok("修改成功，请等待管理员重新审核");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("修改失败：" + e.getMessage());
         }
     }
 
@@ -342,7 +438,8 @@ public class HelpPostController {
     public ResponseEntity<?> reviewPost(
             @PathVariable Long postId,
             @RequestParam String username,
-            @RequestParam String action) {
+            @RequestParam String action,
+            @RequestParam(required = false) String reason) {
         try {
             User admin = userService.findByUsername(username);
             if (admin == null) {
@@ -365,6 +462,9 @@ public class HelpPostController {
                 post.setStatus(com.petplatform.petadoption.entity.PostStatus.APPROVED);
             } else if ("reject".equals(action)) {
                 post.setStatus(com.petplatform.petadoption.entity.PostStatus.REJECTED);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    post.setRejectReason(reason);
+                }
             } else {
                 return ResponseEntity.badRequest().body("无效的操作");
             }

@@ -33,6 +33,10 @@ public class HelpPost {
     @Enumerated(EnumType.STRING)
     private PostStatus status = PostStatus.PENDING;
 
+    // 拒绝理由
+    @Column(columnDefinition = "TEXT")
+    private String rejectReason;
+
     private LocalDateTime createTime = LocalDateTime.now();//创建时间
 
     @ManyToOne

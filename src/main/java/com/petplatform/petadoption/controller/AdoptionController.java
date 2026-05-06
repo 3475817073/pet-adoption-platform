@@ -32,8 +32,6 @@ public class AdoptionController {
 
     /**
      * 提交领养申请
-     * @param request 包含用户名、宠物ID及详细申请信息的请求体
-     * @return 提交结果响应
      */
     @PostMapping("/apply")
     public ResponseEntity<?> apply(@RequestBody Map<String, Object> request) {
@@ -209,7 +207,8 @@ public class AdoptionController {
     public ResponseEntity<?> review(
             @PathVariable Long applicationId,
             @RequestParam String username,
-            @RequestParam String action) {
+            @RequestParam String action,
+            @RequestParam(required = false) String reason) {
 
         try {
             User admin = userService.findByUsername(username);
@@ -250,6 +249,7 @@ public class AdoptionController {
                 for (AdoptionApplication app : petApplications) {
                     if (!app.getId().equals(applicationId) && app.getStatus() == ApplicationStatus.PENDING) {
                         app.setStatus(ApplicationStatus.REJECTED);
+                        app.setRejectReason("该宠物已被其他用户领养，感谢您的关注！");
                         app.setReviewTime(LocalDateTime.now());
                         adoptionApplicationService.save(app);
                     }
@@ -257,6 +257,9 @@ public class AdoptionController {
 
             } else if ("reject".equals(action)) {
                 application.setStatus(ApplicationStatus.REJECTED);
+                if (reason != null && !reason.trim().isEmpty()) {
+                    application.setRejectReason(reason);
+                }
             } else {
                 return ResponseEntity.badRequest().body("无效的操作");
             }

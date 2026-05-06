@@ -97,5 +97,13 @@ public class HelpPostService {
     }
 
 
+    /**
+     * 分页查询指定用户的帖子
+     * 用于个人中心展示用户发布的互助帖
+     */
+    public Page<HelpPost> findByUserPage(Long userId, Pageable pageable) {
+        return helpPostRepository.findByUserIdOrderByCreateTimeDesc(userId, pageable);
+    }
+
 }
 
