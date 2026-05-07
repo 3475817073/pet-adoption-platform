@@ -5,9 +5,11 @@ import PetDetail from '../components/PetDetail.vue'
 import HelpPost from '../components/HelpPost.vue'
 import PostDetail from '../components/PostDetail.vue'
 import MyCenter from '../components/MyCenter.vue'
+import UserProfile from '../components/UserProfile.vue'
 import AdminApplyManagement from '../components/AdminApplyManagement.vue'
 import AdminPetReview from '../components/AdminPetReview.vue'
 import AdminPostReview from '../components/AdminPostReview.vue'
+
 
 const routes = [
     {
@@ -38,6 +40,11 @@ const routes = [
         path: '/post/:id',
         component: PostDetail,
         meta: { title: '帖子详情' }
+    },
+    {
+        path: '/user/:username',
+        component: UserProfile,
+        meta: { title: '用户主页' }
     },
     {
         path: '/center',

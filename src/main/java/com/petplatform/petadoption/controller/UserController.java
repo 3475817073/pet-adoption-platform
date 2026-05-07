@@ -49,7 +49,7 @@ public class UserController {
     }
 
     /**
-     * 登录接口（支持旧密码自动升级）
+     * 登录接口
      */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
@@ -79,4 +79,29 @@ public class UserController {
             return ResponseEntity.status(500).body("登录系统异常：" + e.getMessage());
         }
     }
+
+    /**
+     * 根据用户名获取用户基本信息（用于个人主页）
+     */
+    @GetMapping("/profile/{username}")
+    public ResponseEntity<?> getUserProfile(@PathVariable String username) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("id", user.getId());
+            result.put("username", user.getUsername());
+            result.put("realName", user.getRealName());
+            result.put("role", user.getRole());
+            result.put("createTime", user.getCreateTime());
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

@@ -4,7 +4,7 @@
     <div class="detail-nav">
       <button class="back-btn" @click="goBack">
         <span class="back-icon">←</span>
-        <span>{{ fromPostId ? '返回帖子' : '返回宠物列表' }}</span>
+        <span>{{ fromPostId ? '返回帖子' : fromUserProfile ? '返回用户主页' : '返回宠物列表' }}</span>
       </button>
       <span class="nav-breadcrumb">宠物列表 / 详情</span>
 
@@ -12,6 +12,12 @@
       <div v-if="fromPostId" class="back-to-post-hint">
         <span class="hint-icon">💬</span>
         正在查看帖子关联的宠物
+      </div>
+
+      <!-- 来自用户主页的提示 -->
+      <div v-if="fromUserProfile" class="back-to-user-hint">
+        <span class="hint-icon">👤</span>
+        正在查看 {{ fromUser }} 的宠物
       </div>
     </div>
 
@@ -164,7 +170,7 @@
           <h4 class="post-card-title">{{ post.title }}</h4>
           <p class="post-card-preview">{{ truncateContent(post.content, 100) }}</p>
           <div class="post-card-footer">
-            <span class="post-card-author">👤 {{ post.user?.username || '匿名' }}</span>
+            <span class="post-card-author" @click.stop="goToUserProfile(post)" style="cursor: pointer;">👤 {{ post.user?.username || '匿名' }}</span>
           </div>
         </div>
       </div>
@@ -214,6 +220,8 @@ const currentPhotoIndex = ref(0)
 const applyDialogVisible = ref(false)
 
 const fromPostId = ref(null)
+const fromUserProfile = ref(false)
+const fromUser = ref('')
 
 const relatedPosts = ref([])
 const relatedPostsLoading = ref(false)
@@ -250,8 +258,13 @@ const loadPetDetail = async () => {
     // 获取来源帖子 ID
     fromPostId.value = route.query.fromPostId || null
 
+    // 获取来源用户主页
+    fromUserProfile.value = !!route.query.fromUser
+    fromUser.value = route.query.fromUser || ''
+
     // 加载相关讨论
     await loadRelatedPosts()
+
   } catch (err) {
     error('加载宠物详情失败')
     console.error(err)
@@ -300,6 +313,14 @@ const goBack = () => {
     return
   }
 
+  // 如果来自用户主页，返回用户主页
+  if (fromUserProfile.value && fromUser.value) {
+    router.push({
+      path: `/user/${fromUser.value}`
+    })
+    return
+  }
+
   // 否则返回宠物列表，保持分页状态
   const currentScrollY = window.scrollY || document.documentElement.scrollTop
   console.log('Saving detail page scroll:', currentScrollY)
@@ -314,6 +335,7 @@ const goBack = () => {
     query: { page, size }
   })
 }
+
 
 
 // 申请领养
@@ -349,6 +371,15 @@ const goToPostDetail = (post) => {
     path: `/post/${post.id}`,
     query: { page: 1, size: 10 }
   })
+}
+
+/**
+ * 跳转到用户主页
+ */
+const goToUserProfile = (post) => {
+  if (post?.user?.username) {
+    router.push(`/user/${post.user.username}`)
+  }
 }
 
 // 发布相关讨论

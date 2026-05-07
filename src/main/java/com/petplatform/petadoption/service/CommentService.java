@@ -16,12 +16,34 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CommentService {
     private final CommentRepository commentRepository;
-
+    private final NotificationService notificationService;
     /**
      * 保存或更新评论信息
      */
     public Comment save(Comment comment) {
-        return commentRepository.save(comment);
+        Comment savedComment = commentRepository.save(comment);
+
+        try {
+            Long postId = comment.getPost().getId();
+            Long postOwnerId = comment.getPost().getUser().getId();
+            String commenterUsername = comment.getUser().getUsername();
+            String postTitle = comment.getPost().getTitle();
+
+            if (!postOwnerId.equals(comment.getUser().getId())) {
+                notificationService.createNotification(
+                        postOwnerId,
+                        "COMMENT",
+                        "收到新评论",
+                        commenterUsername + " 评论了你的帖子《" + postTitle + "》：" + (comment.getContent().length() > 50 ? comment.getContent().substring(0, 50) + "..." : comment.getContent()),
+                        savedComment.getId(),
+                        commenterUsername
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("创建评论通知失败: " + e.getMessage());
+        }
+
+        return savedComment;
     }
 
     /**

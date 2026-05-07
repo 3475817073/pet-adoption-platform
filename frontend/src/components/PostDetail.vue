@@ -3,9 +3,10 @@
     <!-- 顶部导航 -->
     <div class="nav-bar">
       <button class="back-btn" @click="goBack">
-        <span class="icon">←</span> 返回互助交流
+        <span class="icon">←</span> {{ fromUserProfile ? '返回用户主页' : '返回互助交流' }}
       </button>
     </div>
+
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -20,20 +21,27 @@
         <!-- 作者信息头 -->
         <header class="author-header">
           <div class="author-left">
-            <div class="avatar-wrapper">
+            <div class="avatar-wrapper" @click="goToUserProfile" style="cursor: pointer;">
               <div class="avatar">{{ postData.user?.username?.[0] || 'U' }}</div>
               <span class="badge" title="资深救助者">🏅</span>
             </div>
             <div class="author-meta">
               <div class="name-row">
-                <span class="name">{{ postData.user?.username || '匿名' }}</span>
+                <span class="name" @click="goToUserProfile" style="cursor: pointer;">{{ postData.user?.username || '匿名' }}</span>
 
               </div>
               <span class="time">{{ formatDateTime(postData.createTime) }}</span>
             </div>
           </div>
-          <el-button class="follow-btn" round size="small">
-            + 关注
+          <el-button
+              class="follow-btn"
+              round
+              size="small"
+              :type="isFollowed ? 'default' : 'primary'"
+              :loading="followLoading"
+              @click="toggleFollow"
+          >
+            {{ isFollowed ? '已关注' : '+ 关注' }}
           </el-button>
         </header>
 
@@ -72,7 +80,7 @@
         </div>
 
         <!-- 关联宠物（轻量化展示） -->
-        <div v-if="postData.relatedPet" class="related-pet-inline" @click="goToPetDetail">
+        <div v-if="postData.relatedPet" class="related-pet-inline" @click="goToPetDetailFromUser">
           <div class="pet-thumb">
             <img v-if="getPetImage(postData.relatedPet)" :src="getPetImage(postData.relatedPet)" />
             <div v-else class="placeholder">🐾</div>
@@ -83,6 +91,8 @@
           </div>
           <span class="arrow">→</span>
         </div>
+
+
       </article>
     </div>
 
@@ -275,12 +285,18 @@ const commentsLoading = ref(false)
 const newComment = ref('')
 const isLoggedIn = ref(false)
 const postImages = ref([])
+const isFollowed = ref(false)
+const followLoading = ref(false)
 
 const replyBoxIndex = ref(-1)
 const replyBoxReplyId = ref(-1)
 const replyBoxType = ref('')
 const replyText = ref('')
 const expandedReplies = ref({})
+
+const fromUserProfile = ref(false)
+const fromUser = ref('')
+
 
 // 评论区抽屉状态
 const commentPanelVisible = ref(false)
@@ -529,6 +545,12 @@ const loadPostDetail = async () => {
     await loadLikeCount()
     await checkLiked()
     await checkFavorited()
+    await checkFollowStatus()
+
+    // 获取来源用户主页
+    fromUserProfile.value = !!route.query.fromUser
+    fromUser.value = route.query.fromUser || ''
+
   } catch (err) {
     error('加载失败')
   } finally {
@@ -610,6 +632,14 @@ const deleteMainComment = (id) => deleteComment(id)
 const deleteReply = (id) => deleteComment(id)
 
 const goBack = () => {
+  // 如果来自用户主页，返回用户主页
+  if (fromUserProfile.value && fromUser.value) {
+    router.push({
+      path: `/user/${fromUser.value}`
+    })
+    return
+  }
+
   const page = route.query.page || 1
   const size = route.query.size || 10
   router.push({
@@ -618,6 +648,7 @@ const goBack = () => {
   })
 }
 
+
 const goToPetDetail = () => {
   if (postData.value?.relatedPet)
     router.push({
@@ -625,6 +656,84 @@ const goToPetDetail = () => {
       query: { fromPostId: postData.value.id }
     })
 }
+
+/**
+ * 检查是否已关注
+ */
+const checkFollowStatus = async () => {
+  if (!isLoggedIn.value || !postData.value?.user?.username) return
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  try {
+    const data = await get('/api/follow/check', {
+      followerUsername: user.username,
+      followingUsername: postData.value.user.username
+    })
+    isFollowed.value = data.followed
+  } catch (err) {
+    console.error('检查关注状态失败:', err)
+  }
+}
+
+/**
+ * 切换关注状态
+ */
+const toggleFollow = async () => {
+  if (!isLoggedIn.value) {
+    warning('请先登录后再关注')
+    triggerLogin()
+    return
+  }
+
+  const userStr = localStorage.getItem('user')
+  const user = JSON.parse(userStr)
+
+  followLoading.value = true
+  try {
+    const data = await post('/api/follow/toggle', {
+      followerUsername: user.username,
+      followingUsername: postData.value.user.username
+    })
+
+    isFollowed.value = data.followed
+
+    if (isFollowed.value) {
+      success('关注成功')
+    } else {
+      success('已取消关注')
+    }
+  } catch (err) {
+    error(err.message || '操作失败')
+  } finally {
+    followLoading.value = false
+  }
+}
+
+/**
+ * 跳转到用户主页
+ */
+const goToUserProfile = () => {
+  if (postData.value?.user?.username) {
+    router.push(`/user/${postData.value.user.username}`)
+  }
+}
+
+/**
+ * 跳转到关联宠物详情，标记来源为当前用户主页
+ */
+const goToPetDetailFromUser = () => {
+  if (postData.value?.relatedPet) {
+    router.push({
+      path: `/pet/${postData.value.relatedPet.id}`,
+      query: {
+        fromPostId: postData.value.id,
+        fromUser: fromUser.value || postData.value.user?.username
+      }
+    })
+  }
+}
+
 
 // 评论区抽屉控制
 const showCommentPanel = () => {
@@ -648,6 +757,7 @@ onMounted(() => {
       if (isLoggedIn.value && postData.value) {
         checkLiked()
         checkFavorited()
+        checkFollowStatus()
       }
     }
   })
@@ -657,6 +767,7 @@ onUnmounted(() => {
   // 清理事件监听器
   window.removeEventListener('storage', handleStorageChange)
 })
+
 </script>
 
 <style scoped>

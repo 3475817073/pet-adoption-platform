@@ -22,6 +22,15 @@
             <div class="stat-number">{{ favoritesCount }}</div>
             <div class="stat-label">我的收藏</div>
           </div>
+          <div class="stat-item" @click="showFollowersDialog = true" style="cursor: pointer;">
+            <div class="stat-number">{{ followersCount }}</div>
+            <div class="stat-label">粉丝</div>
+          </div>
+          <div class="stat-item" @click="showFollowingDialog = true" style="cursor: pointer;">
+            <div class="stat-number">{{ followingCount }}</div>
+            <div class="stat-label">关注</div>
+          </div>
+
         </div>
       </div>
     </el-card>
@@ -306,6 +315,42 @@
       </el-tab-pane>
 
     </el-tabs>
+
+    <!-- 粉丝列表对话框 -->
+    <el-dialog v-model="showFollowersDialog" title="我的粉丝" width="600px">
+      <div v-if="followersLoading" class="loading-text">加载中...</div>
+      <div v-else-if="followers.length === 0" class="empty-text">暂无粉丝</div>
+      <div v-else class="user-list">
+        <div
+            v-for="item in followers"
+            :key="item.id"
+            class="user-list-item"
+            @click="goToUserProfile(item.user.username)"
+        >
+          <div class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
+          <div class="user-name">{{ item.user.username }}</div>
+          <el-tag :type="getRoleColor(item.user.role)" size="small">{{ getRoleText(item.user.role) }}</el-tag>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- 关注列表对话框 -->
+    <el-dialog v-model="showFollowingDialog" title="我的关注" width="600px">
+      <div v-if="followingLoading" class="loading-text">加载中...</div>
+      <div v-else-if="following.length === 0" class="empty-text">暂无关注</div>
+      <div v-else class="user-list">
+        <div
+            v-for="item in following"
+            :key="item.id"
+            class="user-list-item"
+            @click="goToUserProfile(item.user.username)"
+        >
+          <div class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
+          <div class="user-name">{{ item.user.username }}</div>
+          <el-tag :type="getRoleColor(item.user.role)" size="small">{{ getRoleText(item.user.role) }}</el-tag>
+        </div>
+      </div>
+    </el-dialog>
 
     <!-- 编辑帖子弹窗：提供帖子信息编辑表单 -->
     <el-dialog v-model="editPostDialogVisible" :title="`编辑帖子 - ${editingPost?.title || ''}`" width="900px" class="edit-post-dialog">
@@ -594,6 +639,16 @@ const appsPageSize = ref(10)
 /** 申请列表总条数 */
 const appsTotal = ref(0)
 
+// 粉丝和关注相关
+const showFollowersDialog = ref(false)
+const showFollowingDialog = ref(false)
+const followers = ref([])
+const following = ref([])
+const followersLoading = ref(false)
+const followingLoading = ref(false)
+const followersCount = ref(0)
+const followingCount = ref(0)
+
 /**
  * 获取用户角色对应的标签颜色类型
  */
@@ -831,9 +886,87 @@ const loadUserData = async () => {
     myApplications.value = appsData.content
     appsTotal.value = appsData.totalElements
 
+    // 加载粉丝和关注数量
+    await loadFollowCounts()
+
   } catch (err) {
     error(err.message || '加载数据失败')
   }
+}
+
+/**
+ * 加载粉丝列表
+ */
+const loadFollowers = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+
+  const user = JSON.parse(userStr)
+  followersLoading.value = true
+
+  try {
+    const data = await get('/api/follow/followers', {
+      username: user.username,
+      page: 0,
+      size: 50
+    })
+    followers.value = data.content
+  } catch (err) {
+    console.error('加载粉丝失败:', err)
+  } finally {
+    followersLoading.value = false
+  }
+}
+
+/**
+ * 加载关注列表
+ */
+const loadFollowing = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+
+  const user = JSON.parse(userStr)
+  followingLoading.value = true
+
+  try {
+    const data = await get('/api/follow/following', {
+      username: user.username,
+      page: 0,
+      size: 50
+    })
+    following.value = data.content
+  } catch (err) {
+    console.error('加载关注失败:', err)
+  } finally {
+    followingLoading.value = false
+  }
+}
+
+/**
+ * 加载粉丝和关注数量
+ */
+const loadFollowCounts = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+
+  const user = JSON.parse(userStr)
+
+  try {
+    const followersRes = await get('/api/follow/followers/count', { username: user.username })
+    followersCount.value = followersRes.count
+
+    const followingRes = await get('/api/follow/following/count', { username: user.username })
+    followingCount.value = followingRes.count
+  } catch (err) {
+    console.error('加载关注数量失败:', err)
+  }
+}
+
+/**
+ * 跳转到用户主页
+ */
+const goToUserProfile = (username) => {
+  router.push(`/user/${username}`)
 }
 
 /**
@@ -1302,6 +1435,21 @@ watch(activeTab, (newTab) => {
   }
 })
 
+// 监听粉丝对话框打开
+watch(showFollowersDialog, (newVal) => {
+  if (newVal) {
+    loadFollowers()
+  }
+})
+
+// 监听关注对话框打开
+watch(showFollowingDialog, (newVal) => {
+  if (newVal) {
+    loadFollowing()
+  }
+})
+
+
 /**
  * 组件挂载时执行：加载用户数据
  */
@@ -1368,6 +1516,55 @@ onMounted(() => {
   color: #999;
   margin-top: 5px;
 }
+
+/* 用户列表样式 */
+.loading-text, .empty-text {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+  font-size: 14px;
+}
+
+.user-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-list-item:hover {
+  background: #f5f6f7;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF7E5F 0%, #6EE7B7 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.user-name {
+  flex: 1;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
 
 .pet-card {
   transition: all 0.3s ease;

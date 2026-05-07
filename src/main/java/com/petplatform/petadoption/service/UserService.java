@@ -21,6 +21,10 @@ public class UserService {
         return userRepository.findByUsername(username).orElse(null);
     }
 
+    public User findById(Long id) {
+        return userRepository.findById(id).orElse(null);
+    }
+
     /**
      * 检查用户名是否已被注册
      */

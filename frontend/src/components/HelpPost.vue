@@ -29,7 +29,7 @@
           </el-select>
         </el-col>
         <el-col :span="5">
-          <el-select v-model="filterPetType" placeholder="🐾 宠物类型" clearable class="filter-select">
+          <el-select v-model="filterPetType" placeholder="宠物类型" clearable class="filter-select">
             <el-option label="全部" value="" />
             <el-option label="🐱 猫咪" value="猫" />
             <el-option label="🐶 狗狗" value="狗" />
@@ -81,7 +81,7 @@
             <h4 class="post-title">{{ post.title }}</h4>
             <p class="post-content">{{ post.content }}</p>
             <div class="post-footer">
-              <span class="author">👤 {{ post.user?.username || post.author || '匿名' }}</span>
+              <span class="author" @click.stop="goToUserProfile(post)" style="cursor: pointer;">👤 {{ post.user?.username || post.author || '匿名' }}</span>
               <span class="comment-count">💬 {{ post.commentCount || 0 }}</span>
             </div>
           </div>
@@ -522,13 +522,32 @@ const handleJumpPage = () => {
 const goToPostDetail = (post) => {
   const currentScrollY = window.scrollY || document.documentElement.scrollTop
   sessionStorage.setItem('helpScrollPosition', currentScrollY.toString())
+
+  // 如果从用户主页点击的帖子，标记来源
+  const queryData = {
+    page: currentPage.value,
+    size: pageSize.value
+  }
+
+  // 如果当前在用户主页，添加来源标记
+  if (route.path.startsWith('/user/')) {
+    queryData.fromUser = route.params.username
+  }
+
   router.push({
     path: `/post/${post.id}`,
-    query: {
-      page: currentPage.value,
-      size: pageSize.value
-    }
+    query: queryData
   })
+}
+
+
+/**
+ * 跳转到用户主页
+ */
+const goToUserProfile = (post) => {
+  if (post?.user?.username) {
+    router.push(`/user/${post.user.username}`)
+  }
 }
 
 const currentUser = JSON.parse(localStorage.getItem('user'))
