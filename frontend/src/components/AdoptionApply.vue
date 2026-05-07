@@ -161,7 +161,7 @@ watch(visible, (newVal) => {
 
 
 <style scoped>
-/* ===== 彻底隐藏 Element Plus 默认外壳 ===== */
+/* ===== 隐藏 Element Plus 默认外壳 ===== */
 .apply-dialog :deep(.el-overlay) {
   background: rgba(0, 0, 0, 0.5);
 }
@@ -182,14 +182,13 @@ watch(visible, (newVal) => {
   margin: 0 !important;
 }
 
-/* ===== 堆叠包装容器 - 关键：移除 overflow: hidden ===== */
+/* ===== 堆叠包装容器  ===== */
 .dialog-stack-wrapper {
   position: relative;
   background: #ffffff;
   border: 4px solid #1f2937;
   border-radius: 12px;
   transition: all 0.15s ease;
-  /* 删除 overflow: hidden，否则伪元素会被裁剪 */
 }
 
 .dialog-stack-wrapper::before,
