@@ -287,7 +287,7 @@ const doRegister = async () => {
   padding: 0 4px;
 }
 
-/* 输入框样式 - 参考 forms.html 美化 */
+/* 输入框样式 */
 .custom-input :deep(.el-input__wrapper) {
   border: 2px solid #264143;
   border-radius: 4px;

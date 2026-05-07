@@ -896,7 +896,7 @@ const publishPet = async () => {
   font-weight: 700;
 }
 
-/* ===== 性别单选框样式 - 保留粗野主义 ===== */
+/* ===== 性别单选框样式  ===== */
 .gender-radio :deep(.el-radio) {
   margin-right: 0 !important;
 }
@@ -998,7 +998,7 @@ const publishPet = async () => {
   color: #a0aec0;
 }
 
-/* 提交区域 - 保留粗野主义按钮 */
+/* 提交区域  */
 .submit-section {
   margin-top: 40px;
   padding-top: 30px;
