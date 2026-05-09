@@ -29,17 +29,17 @@
             <!-- 如果不是当前登录用户，显示关注和私信按钮 -->
             <div v-if="!isCurrentUser" class="interaction-buttons">
               <el-button
-                :type="isFollowed ? 'default' : 'primary'"
-                @click="toggleFollow"
-                :loading="followLoading"
-                round
+                  :type="isFollowed ? 'default' : 'primary'"
+                  @click="toggleFollow"
+                  :loading="followLoading"
+                  round
               >
                 {{ isFollowed ? '已关注' : '+ 关注' }}
               </el-button>
               <el-button
-                type="success"
-                @click="openMessageDialog"
-                round
+                  type="success"
+                  @click="openMessageDialog"
+                  round
               >
                 ✉ 私信
               </el-button>
@@ -175,7 +175,7 @@
     <transition name="slide-drawer">
       <div v-if="showMessageDialog" class="message-drawer">
 
-      <!-- 遮罩层 -->
+        <!-- 遮罩层 -->
         <div class="drawer-overlay" @click="showMessageDialog = false"></div>
 
         <!-- 私信区主体 -->
@@ -195,19 +195,29 @@
             <div v-for="msg in messages" :key="msg.id"
                  class="message-item"
                  :class="{ 'message-self': msg.sender.username === currentUser?.username }">
-              <div v-if="msg.sender.username !== currentUser?.username" class="message-avatar">
-                {{ msg.sender.username.charAt(0).toUpperCase() }}
-              </div>
+              <!-- 对方的消息 -->
+              <template v-if="msg.sender.username !== currentUser?.username">
+                <div class="message-avatar">
+                  {{ msg.sender.username.charAt(0).toUpperCase() }}
+                </div>
+                <div class="message-bubble">
+                  <div class="message-sender">{{ msg.sender.username }}</div>
+                  <div class="message-text">{{ msg.content }}</div>
+                  <div class="message-time">{{ formatMessageTime(msg.createTime) }}</div>
+                </div>
+              </template>
 
-              <div class="message-bubble">
-                <div class="message-sender">{{ msg.sender.username }}</div>
-                <div class="message-text">{{ msg.content }}</div>
-                <div class="message-time">{{ formatMessageTime(msg.createTime) }}</div>
-              </div>
-
-              <div v-if="msg.sender.username === currentUser?.username" class="message-avatar">
-                {{ msg.sender.username.charAt(0).toUpperCase() }}
-              </div>
+              <!-- 自己的消息 -->
+              <template v-else>
+                <div class="message-bubble">
+                  <div class="message-sender">{{ msg.sender.username }}</div>
+                  <div class="message-text">{{ msg.content }}</div>
+                  <div class="message-time">{{ formatMessageTime(msg.createTime) }}</div>
+                </div>
+                <div class="message-avatar">
+                  {{ msg.sender.username.charAt(0).toUpperCase() }}
+                </div>
+              </template>
             </div>
           </div>
 
@@ -215,12 +225,12 @@
           <div class="drawer-footer">
             <div class="message-input-box">
               <el-input
-                v-model="messageContent"
-                type="textarea"
-                :rows="2"
-                placeholder="输入消息..."
-                resize="none"
-                @keyup.ctrl.enter="sendMessage"
+                  v-model="messageContent"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="输入消息..."
+                  resize="none"
+                  @keyup.ctrl.enter="sendMessage"
               />
               <div class="input-footer">
                 <span class="tip">按 Ctrl + Enter 发送</span>
@@ -234,6 +244,7 @@
       </div>
     </transition>
 
+
   </div>
 </template>
 
@@ -242,6 +253,7 @@ import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { get, post } from '../utils/request.js'
 import { success, warning, error } from '../utils/message.js'
+import defaultPetImage from '../assets/pets-banner.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -561,7 +573,7 @@ const handlePostPageChange = (page) => {
  * 获取宠物图片
  */
 const getPetImage = (pet) => {
-  if (!pet) return ''
+  if (!pet) return defaultPetImage
   if (pet.photoUrl) return pet.photoUrl.startsWith('http') ? pet.photoUrl : 'http://localhost:8080' + pet.photoUrl
   if (pet.photoUrls) {
     try {
@@ -572,7 +584,8 @@ const getPetImage = (pet) => {
       }
     } catch {}
   }
-  return ''
+  // 如果没有图片，返回默认图片
+  return defaultPetImage
 }
 
 /**
@@ -1001,7 +1014,8 @@ onMounted(() => {
 }
 
 .message-item.message-self {
-  flex-direction: row-reverse;
+  flex-direction: row;
+  justify-content: flex-end;
 }
 
 .message-avatar {
@@ -1016,6 +1030,12 @@ onMounted(() => {
   font-weight: bold;
   font-size: 16px;
   flex-shrink: 0;
+  order: 1;
+}
+
+.message-item.message-self .message-avatar {
+  background: linear-gradient(135deg, #6EE7B7, #3B82F6);
+  order: 2;
 }
 
 .message-bubble {
@@ -1024,11 +1044,13 @@ onMounted(() => {
   padding: 12px 16px;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  order: 2;
 }
 
 .message-item.message-self .message-bubble {
   background: #E07A5F;
   color: #fff;
+  order: 1;
 }
 
 .message-sender {
@@ -1057,6 +1079,7 @@ onMounted(() => {
 .message-item.message-self .message-time {
   color: rgba(255,255,255,0.7);
 }
+
 
 .drawer-footer {
   padding: 16px 24px;

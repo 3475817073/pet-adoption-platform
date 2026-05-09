@@ -37,8 +37,6 @@ public class UserController {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
 
             userService.save(user);
-
-            // 只返回简单的字符串，不要拼接 saved.getId()，防止 User 对象序列化报错
             return ResponseEntity.ok("注册成功");
 
         } catch (Exception e) {

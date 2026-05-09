@@ -567,13 +567,14 @@
  * 展示用户基本信息、已发布宠物列表、领养申请记录、我的动态、我的收藏，支持宠物编辑与删除操作
  */
 import { ref, computed, onMounted, inject, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import { get, put, del, post } from '../utils/request.js'
 import { success, warning, error } from '../utils/message.js'
 import { regionData, codeToText } from 'element-china-area-data'
 
 const router = useRouter()
+const route = useRoute()
 const triggerLogin = inject('triggerLogin')
 
 // 省市区数据
@@ -1186,9 +1187,15 @@ const saveEditPost = async () => {
  */
 const goToFavDetail = (fav) => {
   if (fav.targetType === 'PET') {
-    router.push(`/pet/${fav.targetId}`)
+    router.push({
+      path: `/pet/${fav.targetId}`,
+      query: { fromCenter: 'favorites' }
+    })
   } else if (fav.targetType === 'POST') {
-    router.push(`/post/${fav.targetId}`)
+    router.push({
+      path: `/post/${fav.targetId}`,
+      query: { fromCenter: 'favorites' }
+    })
   }
 }
 
@@ -1461,6 +1468,11 @@ onMounted(() => {
 
   //加载收藏数据
   loadFavorites()
+  // 检查是否从详情页返回，恢复Tab状态
+  const tab = route.query.tab
+  if (tab) {
+    activeTab.value = tab
+  }
 })
 </script>
 

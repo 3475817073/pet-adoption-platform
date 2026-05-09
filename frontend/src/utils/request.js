@@ -9,7 +9,7 @@ export async function request(url, options = {}) {
     const userStr = localStorage.getItem('user')
     const user = userStr ? JSON.parse(userStr) : null
 
-    // 构建完整 URL（支持查询参数）
+    // 1.构建完整 URL（支持查询参数）
     let fullUrl = BASE_URL + url
     if (options.params) {
         const queryString = new URLSearchParams(options.params).toString()
@@ -18,7 +18,7 @@ export async function request(url, options = {}) {
         }
     }
 
-    // 构建请求配置
+    // 2.构建请求配置
     const fetchOptions = {
         method: options.method || 'GET',
         headers: {
@@ -27,7 +27,7 @@ export async function request(url, options = {}) {
         }
     }
 
-    // 如果有请求体，序列化
+    // 3.如果有请求体，序列化
     if (options.body) {
         fetchOptions.body = JSON.stringify(options.body)
     }

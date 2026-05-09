@@ -1,13 +1,17 @@
 package com.petplatform.petadoption.controller;
 
 import com.petplatform.petadoption.entity.*;
+import com.petplatform.petadoption.repository.FavoriteRepository;
+import com.petplatform.petadoption.repository.LikeRecordRepository;
 import com.petplatform.petadoption.service.AdoptionApplicationService;
+import com.petplatform.petadoption.service.CommentService;
 import com.petplatform.petadoption.service.HelpPostService;
 import com.petplatform.petadoption.service.PetService;
 import com.petplatform.petadoption.service.UserService;
 import com.petplatform.petadoption.service.VisitRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,6 +20,7 @@ import org.springframework.data.domain.Sort;
 
 import java.util.List;
 import java.util.Map;
+
 
 /**
  * 宠物管理控制器
@@ -32,6 +37,9 @@ public class PetController {
     private final AdoptionApplicationService adoptionApplicationService;
     private final VisitRecordService visitRecordService;
     private final HelpPostService helpPostService;
+    private final CommentService commentService;
+    private final FavoriteRepository favoriteRepository;
+    private final LikeRecordRepository likeRecordRepository;
 
     /**
      * 发布宠物信息
@@ -201,6 +209,7 @@ public class PetController {
      * 删除宠物信息
      * 仅允许宠物发布者本人删除，防止误操作
      */
+    @Transactional
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletePet(
             @PathVariable Long id,
@@ -221,19 +230,31 @@ public class PetController {
                 return ResponseEntity.badRequest().body("无权限删除");
             }
 
-            // 先删除关联的申请和回访记录
+            // 1. 删除与该宠物关联的所有帖子及其子数据（评论、收藏、点赞）
+            List<HelpPost> relatedPosts = helpPostService.findByRelatedPetId(id);
+            for (HelpPost post : relatedPosts) {
+                helpPostService.deletePostWithRelations(post.getId());
+            }
+
+            // 2. 删除宠物的收藏记录
+            favoriteRepository.deleteByTargetTypeAndTargetId("PET", id);
+
+            // 3. 删除宠物的点赞记录
+            likeRecordRepository.deleteByTargetTypeAndTargetId("PET", id);
+
+            // 4. 删除关联的申请和回访记录
             List<AdoptionApplication> applications = adoptionApplicationService.findByPetId(id);
             for (AdoptionApplication app : applications) {
-                // 1. 先删该申请下的所有回访记录
+                // 4.1 先删该申请下的所有回访记录
                 List<VisitRecord> visits = visitRecordService.findByApplicationId(app.getId());
                 for (VisitRecord visit : visits) {
                     visitRecordService.delete(visit.getId());
                 }
-                // 2. 再删申请本身
+                // 4.2 再删申请本身
                 adoptionApplicationService.delete(app.getId());
             }
 
-            // 3. 最后删除宠物
+            // 5. 最后删除宠物
             petService.delete(pet);
             return ResponseEntity.ok("删除成功");
         } catch (Exception e) {

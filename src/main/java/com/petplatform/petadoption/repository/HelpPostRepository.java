@@ -49,5 +49,10 @@ public interface HelpPostRepository extends JpaRepository<HelpPost, Long> {
     Page<HelpPost> findByUserIdOrderByCreateTimeDesc(Long userId, Pageable pageable);
 
 
+    /**
+     * 根据关联的宠物ID查询帖子列表
+     */
+    List<HelpPost> findByRelatedPetId(Long relatedPetId);
+
 
 }

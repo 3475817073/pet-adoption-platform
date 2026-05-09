@@ -3,7 +3,7 @@
     <!-- 顶部导航 -->
     <div class="nav-bar">
       <button class="back-btn" @click="goBack">
-        <span class="icon">←</span> {{ fromUserProfile ? '返回用户主页' : '返回互助交流' }}
+        <span class="icon">←</span> {{ fromUserProfile ? '返回用户主页' : fromCenter ? '返回个人中心' : '返回互助交流' }}
       </button>
     </div>
 
@@ -296,6 +296,7 @@ const expandedReplies = ref({})
 
 const fromUserProfile = ref(false)
 const fromUser = ref('')
+const fromCenter = ref(false)
 
 
 // 评论区抽屉状态
@@ -551,6 +552,9 @@ const loadPostDetail = async () => {
     fromUserProfile.value = !!route.query.fromUser
     fromUser.value = route.query.fromUser || ''
 
+    // 获取来源个人中心
+    fromCenter.value = !!route.query.fromCenter
+
   } catch (err) {
     error('加载失败')
   } finally {
@@ -636,6 +640,15 @@ const goBack = () => {
   if (fromUserProfile.value && fromUser.value) {
     router.push({
       path: `/user/${fromUser.value}`
+    })
+    return
+  }
+
+  // 如果来自个人中心，返回个人中心收藏页面
+  if (fromCenter.value) {
+    router.push({
+      path: '/center',
+      query: { tab: 'favorites' }
     })
     return
   }

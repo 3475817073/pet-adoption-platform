@@ -4,7 +4,7 @@
     <div class="detail-nav">
       <button class="back-btn" @click="goBack">
         <span class="back-icon">←</span>
-        <span>{{ fromPostId ? '返回帖子' : fromUserProfile ? '返回用户主页' : '返回宠物列表' }}</span>
+        <span>{{ fromPostId ? '返回帖子' : fromUserProfile ? '返回用户主页' : fromCenter ? '返回个人中心' : '返回宠物列表' }}</span>
       </button>
       <span class="nav-breadcrumb">宠物列表 / 详情</span>
 
@@ -222,6 +222,7 @@ const applyDialogVisible = ref(false)
 const fromPostId = ref(null)
 const fromUserProfile = ref(false)
 const fromUser = ref('')
+const fromCenter = ref(false)
 
 const relatedPosts = ref([])
 const relatedPostsLoading = ref(false)
@@ -261,6 +262,9 @@ const loadPetDetail = async () => {
     // 获取来源用户主页
     fromUserProfile.value = !!route.query.fromUser
     fromUser.value = route.query.fromUser || ''
+
+    // 获取来源个人中心
+    fromCenter.value = !!route.query.fromCenter
 
     // 加载相关讨论
     await loadRelatedPosts()
@@ -317,6 +321,15 @@ const goBack = () => {
   if (fromUserProfile.value && fromUser.value) {
     router.push({
       path: `/user/${fromUser.value}`
+    })
+    return
+  }
+
+  // 如果来自个人中心，返回个人中心收藏页面
+  if (fromCenter.value) {
+    router.push({
+      path: '/center',
+      query: { tab: 'favorites' }
     })
     return
   }
