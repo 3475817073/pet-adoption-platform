@@ -9,6 +9,7 @@ import UserProfile from '../components/UserProfile.vue'
 import AdminApplyManagement from '../components/AdminApplyManagement.vue'
 import AdminPetReview from '../components/AdminPetReview.vue'
 import AdminPostReview from '../components/AdminPostReview.vue'
+import AdminUserManagement from '../components/AdminUserManagement.vue'
 
 
 const routes = [
@@ -65,6 +66,11 @@ const routes = [
         path: '/admin/posts',
         component: AdminPostReview,
         meta: { title: '帖子审核', requiresAuth: true, requiresAdmin: true }
+    },
+    {
+        path: '/admin/users',
+        component: AdminUserManagement,
+        meta: { title: '用户管理', requiresAuth: true, requiresAdmin: true }
     },
 ]
 

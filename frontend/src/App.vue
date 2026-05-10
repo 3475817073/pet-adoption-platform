@@ -12,7 +12,7 @@
         <!-- 导航菜单 -->
         <nav class="navbar-menu">
           <router-link to="/pets" class="nav-item" :class="{ active: route.path === '/pets' }">
-            <span class="nav-icon">🐶</span>
+            <span class="nav-icon"></span>
             <span>宠物列表</span>
           </router-link>
           <router-link to="/publish" class="nav-item" :class="{ active: route.path === '/publish' }">
@@ -24,23 +24,41 @@
             <span>社区互助</span>
           </router-link>
           <router-link to="/center" class="nav-item" :class="{ active: route.path === '/center' }">
-            <span class="nav-icon">👤</span>
+            <span class="nav-icon"></span>
             <span>个人中心</span>
           </router-link>
 
           <!-- 管理员菜单 -->
           <template v-if="userRole === 'ADMIN'">
-            <router-link to="/admin/applications" class="nav-item" :class="{ active: route.path === '/admin/applications' }">
-              <span class="nav-icon">📋</span>
-              <span>申请审核</span>
-            </router-link>
-            <router-link to="/admin/pets" class="nav-item" :class="{ active: route.path === '/admin/pets' }">
-              <span class="nav-icon">🐾</span>
-              <span>宠物审核</span>
-            </router-link>
-            <router-link to="/admin/posts" class="nav-item" :class="{ active: route.path === '/admin/posts' }">
-              <span class="nav-icon">📝</span>
-              <span>帖子审核</span>
+            <!-- 审核下拉菜单 -->
+            <el-dropdown @command="handleAdminCommand">
+              <div class="nav-item" :class="{ active: isReviewPageActive }">
+                <span class="nav-icon"></span>
+                <span>审核管理</span>
+                <el-icon class="dropdown-arrow"><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="/admin/applications">
+                    <span class="nav-icon"></span>
+                    申请审核
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/admin/pets">
+                    <span class="nav-icon"></span>
+                    宠物审核
+                  </el-dropdown-item>
+                  <el-dropdown-item command="/admin/posts">
+                    <span class="nav-icon"></span>
+                    帖子审核
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+
+            <!-- 用户管理独立菜单 -->
+            <router-link to="/admin/users" class="nav-item" :class="{ active: route.path === '/admin/users' }">
+              <span class="nav-icon"></span>
+              <span>用户管理</span>
             </router-link>
           </template>
         </nav>
@@ -152,7 +170,7 @@
 
 <script setup>
 import { ArrowDown } from '@element-plus/icons-vue'
-import { ref, onMounted, provide, onUnmounted } from 'vue'
+import {ref, onMounted, provide, onUnmounted, computed} from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Login from './components/Login.vue'
 import { get, post } from './utils/request.js'
@@ -165,6 +183,18 @@ const isLoggedIn = ref(false)
 const username = ref('')
 const userRole = ref('')
 const showLogin = ref(false)
+
+// 判断当前是否在审核页面
+const isReviewPageActive = computed(() => {
+  return route.path.startsWith('/admin/applications') ||
+      route.path.startsWith('/admin/pets') ||
+      route.path.startsWith('/admin/posts')
+})
+
+// 处理审核下拉菜单点击
+const handleAdminCommand = (command) => {
+  router.push(command)
+}
 
 // 通知相关状态
 const showNotificationPanel = ref(false)        // 是否显示通知面板
@@ -559,6 +589,16 @@ html, body {
 
 .nav-icon {
   font-size: 18px;
+}
+
+.dropdown-arrow {
+  margin-left: 4px;
+  font-size: 12px;
+  transition: transform 0.3s;
+}
+
+.nav-item:hover .dropdown-arrow {
+  transform: rotate(180deg);
 }
 
 /* 用户操作区 */

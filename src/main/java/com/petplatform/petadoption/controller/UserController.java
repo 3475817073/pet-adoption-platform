@@ -32,6 +32,13 @@ public class UserController {
                 return ResponseEntity.badRequest().body("用户名已存在！");
             }
 
+            if (user.getPhone() != null && !user.getPhone().trim().isEmpty()) {
+                String phoneRegex = "^1[3-9]\\d{9}$";
+                if (!user.getPhone().matches(phoneRegex)) {
+                    return ResponseEntity.badRequest().body("请输入正确的手机号");
+                }
+            }
+
             user.setRole(Role.USER);
             // 加密密码
             user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -99,6 +106,56 @@ public class UserController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * 分页获取用户列表（仅管理员可用）
+     */
+    @GetMapping("/list")
+    public ResponseEntity<?> getUserList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            org.springframework.data.domain.Pageable pageable =
+                    org.springframework.data.domain.PageRequest.of(page, size);
+            org.springframework.data.domain.Page<User> users = userService.getUsers(pageable);
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /**
+     * 删除用户（仅管理员可用）
+     */
+    @DeleteMapping("/delete/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId, @RequestParam String adminUsername) {
+        try {
+            // 验证管理员权限
+            User admin = userService.findByUsername(adminUsername);
+            if (admin == null || admin.getRole() != com.petplatform.petadoption.entity.Role.ADMIN) {
+                return ResponseEntity.status(403).body("无权限执行此操作");
+            }
+
+            // 不能删除自己
+            if (admin.getId().equals(userId)) {
+                return ResponseEntity.badRequest().body("不能删除自己的账号");
+            }
+
+            // 检查用户是否存在
+            User targetUser = userService.findById(userId);
+            if (targetUser == null) {
+                return ResponseEntity.badRequest().body("用户不存在");
+            }
+
+            // 执行删除（级联删除所有相关数据）
+            userService.deleteUser(userId);
+            return ResponseEntity.ok("用户删除成功");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(500).body("删除失败：" + e.getMessage());
         }
     }
 

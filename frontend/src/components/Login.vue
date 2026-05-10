@@ -209,6 +209,14 @@ const doRegister = async () => {
     return
   }
 
+  if (registerForm.value.phone && registerForm.value.phone.trim()) {
+    const phoneRegex = /^1[3-9]\d{9}$/
+    if (!phoneRegex.test(registerForm.value.phone)) {
+      warning('请输入正确的手机号')
+      return
+    }
+  }
+
   registerLoading.value = true
   try {
     const { confirmPassword, ...submitData } = registerForm.value
