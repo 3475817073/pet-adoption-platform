@@ -58,6 +58,13 @@ public class UserService {
         return userRepository.findAll(pageable);
     }
 
+    /**
+     * 搜索用户（根据用户名或真实姓名模糊匹配）
+     */
+    public org.springframework.data.domain.Page<User> searchUsers(String keyword, org.springframework.data.domain.Pageable pageable) {
+        return userRepository.findByUsernameContainingOrRealNameContaining(keyword, keyword, pageable);
+    }
+
 
     /**
      * 删除用户及其所有相关数据（级联删除）

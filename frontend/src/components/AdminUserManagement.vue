@@ -104,10 +104,14 @@ const getRoleText = (role) => {
 const loadUsers = async () => {
   loading.value = true
   try {
-    const allUsers = await get('/api/user/list', {
+    const params = {
       page: currentPage.value - 1,
       size: pageSize.value
-    })
+    }
+    if (searchKeyword.value.trim()) {
+      params.keyword = searchKeyword.value.trim()
+    }
+    const allUsers = await get('/api/user/list', params)
     userList.value = allUsers.content || []
     total.value = allUsers.totalElements || 0
   } catch (err) {

@@ -19,4 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByUsername(String username);
 
     Page<User> findAll(Pageable pageable);
+    /**
+     * 根据关键词搜索用户（用户名或真实姓名模糊匹配）
+     */
+    Page<User> findByUsernameContainingOrRealNameContaining(String keyword, String keyword2, Pageable pageable);
 }

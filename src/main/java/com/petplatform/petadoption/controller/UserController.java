@@ -115,11 +115,17 @@ public class UserController {
     @GetMapping("/list")
     public ResponseEntity<?> getUserList(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String keyword) {
         try {
             org.springframework.data.domain.Pageable pageable =
                     org.springframework.data.domain.PageRequest.of(page, size);
-            org.springframework.data.domain.Page<User> users = userService.getUsers(pageable);
+            org.springframework.data.domain.Page<User> users;
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                users = userService.searchUsers(keyword.trim(), pageable);
+            } else {
+                users = userService.getUsers(pageable);
+            }
             return ResponseEntity.ok(users);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
