@@ -357,6 +357,174 @@
         </el-empty>
       </el-tab-pane>
 
+      <!-- 数据统计：仅管理员可见 -->
+      <el-tab-pane v-if="user?.role === 'ADMIN'" label="📊 数据统计" name="statistics">
+        <div v-if="statsLoading" class="loading-container">
+          <el-skeleton :rows="5" animated />
+        </div>
+        <div v-else class="statistics-container">
+          <!-- 核心数据概览 -->
+          <el-row :gutter="20" class="stats-overview">
+            <el-col :xs="12" :sm="6">
+              <div class="stat-card stat-pets">
+                <div class="stat-icon">🐾</div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ stats.totalPets }}</div>
+                  <div class="stat-label">宠物总数</div>
+                </div>
+              </div>
+            </el-col>
+            <el-col :xs="12" :sm="6">
+              <div class="stat-card stat-users">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ stats.totalUsers }}</div>
+                  <div class="stat-label">用户总数</div>
+                </div>
+              </div>
+            </el-col>
+            <el-col :xs="12" :sm="6">
+              <div class="stat-card stat-apps">
+                <div class="stat-icon">📝</div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ stats.totalApplications }}</div>
+                  <div class="stat-label">领养申请</div>
+                </div>
+              </div>
+            </el-col>
+            <el-col :xs="12" :sm="6">
+              <div class="stat-card stat-posts">
+                <div class="stat-icon">💬</div>
+                <div class="stat-info">
+                  <div class="stat-value">{{ stats.totalPosts }}</div>
+                  <div class="stat-label">互助帖子</div>
+                </div>
+              </div>
+            </el-col>
+          </el-row>
+
+          <!-- 审核状态分布 -->
+          <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :xs="24" :sm="12">
+              <el-card class="stats-detail-card" shadow="hover">
+                <h4 class="card-title">宠物审核状态</h4>
+                <div class="bar-chart">
+                  <div class="bar-item">
+                    <span class="bar-label">待审核</span>
+                    <div class="bar-track">
+                      <div class="bar-fill pending" :style="{width: getPercent(stats.pendingPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.pendingPets }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">已通过</span>
+                    <div class="bar-track">
+                      <div class="bar-fill approved" :style="{width: getPercent(stats.approvedPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.approvedPets }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">已拒绝</span>
+                    <div class="bar-track">
+                      <div class="bar-fill rejected" :style="{width: getPercent(stats.rejectedPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.rejectedPets }}</span>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+
+            <el-col :xs="24" :sm="12">
+              <el-card class="stats-detail-card" shadow="hover">
+                <h4 class="card-title">申请审核状态</h4>
+                <div class="bar-chart">
+                  <div class="bar-item">
+                    <span class="bar-label">待审核</span>
+                    <div class="bar-track">
+                      <div class="bar-fill pending" :style="{width: getPercent(stats.pendingApps, stats.totalApplications)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.pendingApps }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">已通过</span>
+                    <div class="bar-track">
+                      <div class="bar-fill approved" :style="{width: getPercent(stats.approvedApps, stats.totalApplications)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.approvedApps }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">已拒绝</span>
+                    <div class="bar-track">
+                      <div class="bar-fill rejected" :style="{width: getPercent(stats.rejectedApps, stats.totalApplications)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.rejectedApps }}</span>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+
+          <!-- 运营数据 -->
+          <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="24">
+              <el-card class="stats-detail-card" shadow="hover">
+                <h4 class="card-title">运营数据</h4>
+                <div class="metrics-grid">
+                  <div class="metric-item">
+                    <div class="metric-label">领养成功率</div>
+                    <div class="metric-value">{{ adoptionSuccessRate }}%</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">帖子通过率</div>
+                    <div class="metric-value">{{ postApprovalRate }}%</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">待处理宠物</div>
+                    <div class="metric-value">{{ stats.pendingPets }}</div>
+                  </div>
+                  <div class="metric-item">
+                    <div class="metric-label">待处理申请</div>
+                    <div class="metric-value">{{ stats.pendingApps }}</div>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+
+          <!-- 宠物类型分布 -->
+          <el-row :gutter="20" style="margin-top: 20px">
+            <el-col :span="24">
+              <el-card class="stats-detail-card" shadow="hover">
+                <h4 class="card-title">宠物类型分布</h4>
+                <div class="bar-chart">
+                  <div class="bar-item">
+                    <span class="bar-label">猫</span>
+                    <div class="bar-track">
+                      <div class="bar-fill type-cat" :style="{width: getPercent(stats.catPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.catPets }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">狗</span>
+                    <div class="bar-track">
+                      <div class="bar-fill type-dog" :style="{width: getPercent(stats.dogPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.dogPets }}</span>
+                  </div>
+                  <div class="bar-item">
+                    <span class="bar-label">其他</span>
+                    <div class="bar-track">
+                      <div class="bar-fill type-other" :style="{width: getPercent(stats.otherPets, stats.totalPets)}"></div>
+                    </div>
+                    <span class="bar-value">{{ stats.otherPets }}</span>
+                  </div>
+                </div>
+              </el-card>
+            </el-col>
+          </el-row>
+        </div>
+      </el-tab-pane>
+
 
     </el-tabs>
 
@@ -799,6 +967,71 @@ const feedbackForm = ref({
   feedback: '',
   needFollowUp: false
 })
+
+// 数据统计相关（仅管理员）
+const statsLoading = ref(false)
+const stats = ref({
+  totalPets: 0,
+  totalUsers: 0,
+  totalApplications: 0,
+  totalPosts: 0,
+  pendingPets: 0,
+  approvedPets: 0,
+  rejectedPets: 0,
+  pendingApps: 0,
+  approvedApps: 0,
+  rejectedApps: 0,
+  catPets: 0,
+  dogPets: 0,
+  otherPets: 0,
+  pendingPosts: 0,
+  approvedPosts: 0,
+  rejectedPosts: 0
+})
+
+/**
+ * 计算百分比
+ */
+const getPercent = (value, total) => {
+  if (total === 0) return '0%'
+  return (value / total * 100) + '%'
+}
+
+/**
+ * 计算领养成功率
+ */
+const adoptionSuccessRate = computed(() => {
+  if (stats.value.totalApplications === 0) return 0
+  return Math.round(stats.value.approvedApps / stats.value.totalApplications * 100)
+})
+
+/**
+ * 计算帖子审核通过率
+ */
+const postApprovalRate = computed(() => {
+  if (stats.value.totalPosts === 0) return 0
+  return Math.round(stats.value.approvedPosts / stats.value.totalPosts * 100)
+})
+
+/**
+ * 加载管理员统计数据
+ */
+const loadStatistics = async () => {
+  if (user.value?.role !== 'ADMIN') return
+
+  statsLoading.value = true
+  try {
+    const data = await get('/api/admin/statistics', {
+      username: user.value.username
+    })
+    stats.value = data
+  } catch (err) {
+    error('加载统计数据失败')
+  } finally {
+    statsLoading.value = false
+  }
+}
+
 
 /**
  * 获取用户角色对应的标签颜色类型
@@ -1731,8 +1964,11 @@ const handleTabChange = (tabName) => {
     loadFavorites()
   } else if (tabName === 'visits' && myVisits.value.length === 0) {
     loadMyVisits()
+  } else if (tabName === 'statistics' && user.value?.role === 'ADMIN') {
+    loadStatistics()
   }
 }
+
 
 // 使用watch监听activeTab变化，确保Tab切换时加载数据
 watch(activeTab, (newTab) => {
@@ -1742,6 +1978,8 @@ watch(activeTab, (newTab) => {
     loadActivities()
   } else if (newTab === 'visits' && myVisits.value.length === 0) {
     loadMyVisits()
+  } else if (newTab === 'statistics' && user.value?.role === 'ADMIN') {
+    loadStatistics()
   }
 })
 
@@ -2760,4 +2998,176 @@ onMounted(() => {
   padding-bottom: 10px;
   border-bottom: 1px dashed #e5e7eb;
 }
+
+/* 数据统计样式 */
+.statistics-container {
+  padding: 20px;
+}
+
+.stats-overview {
+  margin-bottom: 10px;
+}
+
+.stat-card {
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: #4A5568;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(255, 126, 95, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 32px rgba(255, 126, 95, 0.18);
+}
+
+.stat-pets {
+  background: linear-gradient(135deg, #FFE5D9 0%, #FFD4B8 100%);
+}
+
+.stat-users {
+  background: linear-gradient(135deg, #D1FAE5 0%, #BFDBFE 100%);
+}
+
+.stat-apps {
+  background: linear-gradient(135deg, #FECDD3 0%, #FDA4AF 100%);
+}
+
+.stat-posts {
+  background: linear-gradient(135deg, #E9D5FF 0%, #DDD6FE 100%);
+}
+
+
+.stat-icon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-top: 4px;
+}
+
+.stats-detail-card {
+  border-radius: 16px;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.card-title {
+  margin: 0 0 20px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #3D405B;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  width: 80px;
+  font-size: 14px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.bar-track {
+  flex: 1;
+  height: 10px;
+  background: #f5f6f7;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.6s ease;
+}
+
+.bar-fill.pending {
+  background: linear-gradient(90deg, #FFB347 0%, #FFCC33 100%);
+}
+
+.bar-fill.approved {
+  background: linear-gradient(90deg, #6EE7B7 0%, #34D399 100%);
+}
+
+.bar-fill.rejected {
+  background: linear-gradient(90deg, #FF9999 0%, #FF6B6B 100%);
+}
+
+.bar-fill.type-cat {
+  background: linear-gradient(90deg, #FF7E5F 0%, #FEB47B 100%);
+}
+
+.bar-fill.type-dog {
+  background: linear-gradient(90deg, #6EE7B7 0%, #3B82F6 100%);
+}
+
+.bar-fill.type-other {
+  background: linear-gradient(90deg, #C4B5FD 0%, #7C3AED 100%);
+}
+
+.bar-value {
+  width: 40px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.metric-item {
+  text-align: center;
+  padding: 16px;
+  background: linear-gradient(135deg, #FFF9F0 0%, #FFF5E6 100%);
+  border-radius: 12px;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #FF7E5F;
+}
+
+
 </style>
