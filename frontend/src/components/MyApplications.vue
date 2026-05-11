@@ -27,6 +27,18 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="审核信息" min-width="200">
+            <template #default="{ row }">
+              <div v-if="row.status === 'REJECTED' && row.rejectReason"
+                   style="color: #f56c6c; font-size: 13px;">
+                <span>拒绝理由：{{ row.rejectReason }}</span>
+              </div>
+              <div v-else-if="row.status === 'APPROVED'"
+                   style="color: #67c23a; font-size: 13px;">
+                审核通过
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column prop="applyTime" label="申请时间" width="180">
             <template #default="{ row }">
               {{ formatTime(row.applyTime) }}

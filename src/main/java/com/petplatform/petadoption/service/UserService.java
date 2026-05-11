@@ -1,10 +1,13 @@
 package com.petplatform.petadoption.service;
 
+import com.petplatform.petadoption.entity.Role;
 import com.petplatform.petadoption.entity.User;
 import com.petplatform.petadoption.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 用户业务逻辑层
@@ -126,5 +129,13 @@ public class UserService {
         // 11. 最后删除用户本身
         userRepository.deleteById(userId);
     }
+
+    /**
+     * 根据角色查询用户列表
+     */
+    public List<User> findByRole(Role role) {
+        return userRepository.findByRole(role);
+    }
+// ...
 }
 

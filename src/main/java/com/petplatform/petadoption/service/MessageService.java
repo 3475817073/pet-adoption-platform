@@ -26,7 +26,7 @@ public class MessageService {
      * 发送消息
      */
     @Transactional
-    public Message sendMessage(String senderUsername, String receiverUsername, String content) {
+    public Message sendMessage(String senderUsername, String receiverUsername, String content, String imageUrl) {
         User sender = userService.findByUsername(senderUsername);
         if (sender == null) throw new RuntimeException("发送者不存在");
 
@@ -37,24 +37,26 @@ public class MessageService {
             throw new RuntimeException("不能给自己发送消息");
         }
 
-        if (content == null || content.trim().isEmpty()) {
-            throw new RuntimeException("消息内容不能为空");
+        if ((content == null || content.trim().isEmpty()) && (imageUrl == null || imageUrl.trim().isEmpty())) {
+            throw new RuntimeException("消息内容或图片至少需要一个");
         }
 
         Message message = new Message();
         message.setSender(sender);
         message.setReceiver(receiver);
-        message.setContent(content.trim());
+        message.setContent(content != null && !content.trim().isEmpty() ? content.trim() : "");
+        message.setImageUrl(imageUrl);
         message.setRead(false);
 
         Message savedMessage = messageRepository.save(message);
 
         try {
+            String preview = imageUrl != null && !imageUrl.isEmpty() ? "[图片]" : (content.length() > 50 ? content.substring(0, 50) + "..." : content);
             notificationService.createNotification(
                     receiver.getId(),
                     "MESSAGE",
                     "收到新私信",
-                    senderUsername + " 给你发了一条消息：" + (content.length() > 50 ? content.substring(0, 50) + "..." : content),
+                    senderUsername + " 给你发了一条消息：" + preview,
                     savedMessage.getId(),
                     senderUsername
             );

@@ -314,6 +314,50 @@
         </div>
       </el-tab-pane>
 
+      <!-- 我的回访：展示领养后的回访反馈 -->
+      <el-tab-pane label="📋 我的回访" name="visits">
+        <div v-if="visitsLoading" class="loading-container">
+          <el-skeleton :rows="5" animated />
+        </div>
+
+        <el-row v-else-if="myVisits.length > 0" :gutter="20">
+          <el-col v-for="visit in myVisits" :key="visit.id" :span="24" style="margin-bottom: 20px">
+            <el-card shadow="hover" class="visit-card">
+              <div class="visit-header">
+                <div class="visit-pet-info">
+                  <img v-if="getPetImageUrl(visit.pet)" :src="getPetImageUrl(visit.pet)" class="visit-pet-thumb" />
+                  <div v-else class="visit-pet-thumb no-image"></div>
+                  <div>
+                    <h4>{{ visit.pet?.name || '未知宠物' }}</h4>
+                    <p style="font-size: 13px; color: #999; margin: 0;">{{ visit.pet?.type }} · {{ visit.pet?.gender }}</p>
+                  </div>
+                </div>
+                <el-tag type="success" size="large">已领养</el-tag>
+              </div>
+
+              <div class="visit-actions">
+                <el-button type="primary" @click="openFeedbackDialog(visit)">
+                  提交回访反馈
+                </el-button>
+                <el-button @click="viewFeedbackHistory(visit.id)">
+                  查看反馈历史
+                </el-button>
+              </div>
+
+              <div class="visit-tip">
+                <el-icon><InfoFilled /></el-icon>
+                <span>定期反馈宠物近况，帮助管理员更好地了解领养情况</span>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+
+        <el-empty v-else description="还没有需要回访的领养记录" :image-size="150">
+          <el-button type="primary" @click="goToPetList">去领养宠物</el-button>
+        </el-empty>
+      </el-tab-pane>
+
+
     </el-tabs>
 
     <!-- 粉丝列表对话框 -->
@@ -558,9 +602,99 @@
         </div>
       </div>
     </el-dialog>
+
+    <!-- 提交回访反馈对话框 -->
+    <el-dialog v-model="feedbackDialogVisible" title="提交回访反馈" width="700px">
+      <div v-if="currentVisitPet" class="feedback-container">
+        <div class="feedback-pet-info">
+          <img v-if="getPetImageUrl(currentVisitPet.pet)" :src="getPetImageUrl(currentVisitPet.pet)" class="feedback-pet-thumb" />
+          <div v-else class="feedback-pet-thumb no-image"></div>
+          <div>
+            <h4>{{ currentVisitPet.pet?.name }}</h4>
+            <p style="font-size: 13px; color: #999; margin: 0;">{{ currentVisitPet.pet?.type }} · {{ currentVisitPet.pet?.gender }}</p>
+          </div>
+        </div>
+
+        <el-form :model="feedbackForm" label-width="100px" class="feedback-form">
+          <el-form-item label="宠物状态" required>
+            <el-radio-group v-model="feedbackForm.petStatus">
+              <el-radio label="HEALTHY">✅ 适应良好</el-radio>
+              <el-radio label="ADAPTING">⚠️ 适应中</el-radio>
+              <el-radio label="ISSUES">❌ 存在问题</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
+          <el-form-item label="宠物近况" required>
+            <el-input
+                v-model="feedbackForm.content"
+                type="textarea"
+                rows="4"
+                placeholder="请描述宠物目前的生活状况、健康情况、行为习惯等..."
+            />
+          </el-form-item>
+
+          <el-form-item label="您的反馈">
+            <el-input
+                v-model="feedbackForm.feedback"
+                type="textarea"
+                rows="3"
+                placeholder="您在领养过程中遇到的问题或建议..."
+            />
+          </el-form-item>
+
+          <el-form-item label="需要帮助">
+            <el-switch v-model="feedbackForm.needFollowUp" />
+            <span style="margin-left: 10px; color: #666">{{ feedbackForm.needFollowUp ? '需要管理员联系' : '暂不需要' }}</span>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <el-button @click="feedbackDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitFeedback" :loading="submittingFeedback">
+          提交反馈
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 查看反馈历史对话框 -->
+    <el-dialog v-model="feedbackHistoryDialogVisible" title="反馈历史" width="800px">
+      <div v-if="feedbackHistoryLoading" class="loading-container">
+        <el-skeleton :rows="5" animated />
+      </div>
+      <div v-else-if="feedbackHistory.length === 0" style="text-align: center; padding: 40px; color: #999">
+        暂无反馈记录
+      </div>
+      <el-timeline v-else>
+        <el-timeline-item
+            v-for="record in feedbackHistory"
+            :key="record.id"
+            :timestamp="formatDate(record.visitTime)"
+            placement="top"
+        >
+          <el-card shadow="hover" class="feedback-record-card">
+            <div class="feedback-record-header">
+              <el-tag :type="getFeedbackTypeTag(record.visitType)" size="small">
+                {{ getFeedbackTypeText(record.visitType) }}
+              </el-tag>
+              <el-tag :type="getPetStatusTag(record.petStatus)" size="small" style="margin-left: 10px">
+                {{ getPetStatusText(record.petStatus) }}
+              </el-tag>
+            </div>
+            <div v-if="record.content" style="margin-top: 12px">
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">📝 宠物近况：</div>
+              <div style="color: #333; line-height: 1.6">{{ record.content }}</div>
+            </div>
+            <div v-if="record.feedback" style="margin-top: 12px">
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">💬 领养者反馈：</div>
+              <div style="color: #333; line-height: 1.6">{{ record.feedback }}</div>
+            </div>
+          </el-card>
+        </el-timeline-item>
+      </el-timeline>
+    </el-dialog>
   </div>
 </template>
-
 <script setup>
 /**
  * 个人中心页面组件
@@ -649,6 +783,22 @@ const followersLoading = ref(false)
 const followingLoading = ref(false)
 const followersCount = ref(0)
 const followingCount = ref(0)
+
+// 回访相关
+const myVisits = ref([])
+const visitsLoading = ref(false)
+const feedbackDialogVisible = ref(false)
+const feedbackHistoryDialogVisible = ref(false)
+const currentVisitPet = ref(null)
+const submittingFeedback = ref(false)
+const feedbackHistoryLoading = ref(false)
+const feedbackHistory = ref([])
+const feedbackForm = ref({
+  petStatus: 'HEALTHY',
+  content: '',
+  feedback: '',
+  needFollowUp: false
+})
 
 /**
  * 获取用户角色对应的标签颜色类型
@@ -969,6 +1119,155 @@ const loadFollowCounts = async () => {
 const goToUserProfile = (username) => {
   router.push(`/user/${username}`)
 }
+
+/**
+ * 加载我的回访列表
+ */
+const loadMyVisits = async () => {
+  const userStr = localStorage.getItem('user')
+  if (!userStr) return
+
+  const user = JSON.parse(userStr)
+  visitsLoading.value = true
+
+  try {
+    const data = await get('/api/visit/my-feedbacks', { username: user.username })
+    myVisits.value = data
+  } catch (err) {
+    console.error('加载回访列表失败:', err)
+    error(err.message || '加载失败')
+  } finally {
+    visitsLoading.value = false
+  }
+}
+
+/**
+ * 打开反馈对话框
+ */
+const openFeedbackDialog = (visitPet) => {
+  currentVisitPet.value = visitPet
+  feedbackForm.value = {
+    petStatus: 'HEALTHY',
+    content: '',
+    feedback: '',
+    needFollowUp: false
+  }
+  feedbackDialogVisible.value = true
+}
+
+/**
+ * 提交回访反馈
+ */
+const submitFeedback = async () => {
+  if (!feedbackForm.value.content || !feedbackForm.value.petStatus) {
+    warning('请填写宠物状态和近况描述')
+    return
+  }
+
+  submittingFeedback.value = true
+  const userStr = localStorage.getItem('user')
+  if (!userStr) {
+    warning('请先登录')
+    submittingFeedback.value = false
+    return
+  }
+
+  const user = JSON.parse(userStr)
+
+  try {
+    await post('/api/visit/submit-feedback', {
+      username: user.username,
+      applicationId: currentVisitPet.value.id,
+      petStatus: feedbackForm.value.petStatus,
+      content: feedbackForm.value.content,
+      feedback: feedbackForm.value.feedback,
+      needFollowUp: feedbackForm.value.needFollowUp
+    })
+
+    success('反馈提交成功，感谢您的配合！')
+    feedbackDialogVisible.value = false
+
+    // 重新加载回访列表
+    await loadMyVisits()
+  } catch (err) {
+    error(err.message || '提交失败')
+  } finally {
+    submittingFeedback.value = false
+  }
+}
+
+/**
+ * 查看反馈历史
+ */
+const viewFeedbackHistory = async (applicationId) => {
+  feedbackHistoryLoading.value = true
+  feedbackHistoryDialogVisible.value = true
+
+  try {
+    const data = await get(`/api/visit/feedback-history/${applicationId}`)
+    feedbackHistory.value = data
+  } catch (err) {
+    console.error('加载反馈历史失败:', err)
+    error(err.message || '加载失败')
+  } finally {
+    feedbackHistoryLoading.value = false
+  }
+}
+
+/**
+ * 获取反馈类型文本
+ */
+const getFeedbackTypeText = (type) => {
+  const map = {
+    'USER_FEEDBACK': '📝 用户反馈',
+    'PHONE': '📞 电话回访',
+    'ON_SITE': '🏠 上门回访',
+    'ONLINE': '💻 在线回访',
+    'PLANNED': '📅 计划回访'
+  }
+  return map[type] || type
+}
+
+/**
+ * 获取反馈类型标签颜色
+ */
+const getFeedbackTypeTag = (type) => {
+  const map = {
+    'USER_FEEDBACK': 'primary',
+    'PHONE': 'success',
+    'ON_SITE': 'warning',
+    'ONLINE': 'info',
+    'PLANNED': ''
+  }
+  return map[type] || ''
+}
+
+/**
+ * 获取宠物状态文本
+ */
+const getPetStatusText = (status) => {
+  const map = {
+    'HEALTHY': '✅ 适应良好',
+    'ADAPTING': '⚠️ 适应中',
+    'ISSUES': '❌ 存在问题',
+    '待回访': '📅 待回访'
+  }
+  return map[status] || status
+}
+
+/**
+ * 获取宠物状态标签颜色
+ */
+const getPetStatusTag = (status) => {
+  const map = {
+    'HEALTHY': 'success',
+    'ADAPTING': 'warning',
+    'ISSUES': 'danger',
+    '待回访': ''
+  }
+  return map[status] || ''
+}
+
 
 /**
  * 加载动态数据
@@ -1430,6 +1729,8 @@ const handleTabChange = (tabName) => {
     loadActivities()
   } else if (tabName === 'favorites' && favorites.value.length === 0) {
     loadFavorites()
+  } else if (tabName === 'visits' && myVisits.value.length === 0) {
+    loadMyVisits()
   }
 }
 
@@ -1439,6 +1740,8 @@ watch(activeTab, (newTab) => {
     loadFavorites()
   } else if (newTab === 'activity' && activities.value.length === 0) {
     loadActivities()
+  } else if (newTab === 'visits' && myVisits.value.length === 0) {
+    loadMyVisits()
   }
 })
 
@@ -2340,5 +2643,121 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-top: 10px;
+}
+
+/* ===== 回访相关样式 ===== */
+.visit-card {
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.visit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.visit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.visit-pet-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.visit-pet-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.visit-pet-thumb.no-image {
+  background: url('@/assets/pets-banner.png') center/cover no-repeat;
+  background-color: #f3f4f6;
+}
+
+.visit-pet-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.visit-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.visit-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(135deg, #FEF3F3 0%, #FEE2E2 100%);
+  border-radius: 8px;
+  color: #DC2626;
+  font-size: 13px;
+}
+
+.feedback-container {
+  padding: 10px;
+}
+
+.feedback-pet-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.feedback-pet-thumb {
+  width: 70px;
+  height: 70px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.feedback-pet-thumb.no-image {
+  background: url('@/assets/pets-banner.png') center/cover no-repeat;
+  background-color: #f3f4f6;
+}
+
+.feedback-pet-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
+.feedback-form {
+  margin-top: 20px;
+}
+
+.feedback-record-card {
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.feedback-record-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-record-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e5e7eb;
 }
 </style>

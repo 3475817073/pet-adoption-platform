@@ -1,9 +1,7 @@
 package com.petplatform.petadoption.controller;
 
 import com.petplatform.petadoption.entity.*;
-import com.petplatform.petadoption.service.AdoptionApplicationService;
-import com.petplatform.petadoption.service.PetService;
-import com.petplatform.petadoption.service.UserService;
+import com.petplatform.petadoption.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +27,8 @@ public class AdoptionController {
     private final AdoptionApplicationService adoptionApplicationService;
     private final PetService petService;
     private final UserService userService;
+    private final NotificationService notificationService;
+    private final VisitRecordService visitRecordService;
 
     /**
      * 提交领养申请
@@ -245,6 +245,39 @@ public class AdoptionController {
                 pet.setStatus(PetStatus.ADOPTED);
                 petService.save(pet);
 
+                //自动生成回访计划
+                try {
+                    com.petplatform.petadoption.entity.VisitRecord visitPlan = new com.petplatform.petadoption.entity.VisitRecord();
+                    visitPlan.setApplication(application);
+                    // 设置回访人（管理员）
+                    List<User> admins = userService.findByRole(com.petplatform.petadoption.entity.Role.ADMIN);
+                    if (!admins.isEmpty()) {
+                        visitPlan.setVisitor(admins.get(0));
+                    }
+                    visitPlan.setVisitType("PLANNED");
+                    visitPlan.setVisitTime(application.getReviewTime().plusDays(7));
+                    visitPlan.setPetStatus("待回访");
+                    visitPlan.setContent("系统自动生成的首次回访计划，请在领养后7天内完成回访");
+                    visitPlan.setNeedFollowUp(true);
+                    visitPlan.setNextVisitTime(application.getReviewTime().plusDays(30));
+                    visitRecordService.save(visitPlan);
+
+                    // 通知管理员有新回访任务
+                    if (!admins.isEmpty()) {
+                        notificationService.createNotification(
+                                admins.get(0).getId(),
+                                "VISIT_NOTICE",
+                                "新回访任务",
+                                "请在 " + visitPlan.getVisitTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd")) +
+                                        " 对【" + application.getAdopter().getUsername() + "】进行首次回访",
+                                visitPlan.getId(),
+                                "系统"
+                        );
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
                 // 自动拒绝该宠物的其他待审核申请
                 for (AdoptionApplication app : petApplications) {
                     if (!app.getId().equals(applicationId) && app.getStatus() == ApplicationStatus.PENDING) {
@@ -252,13 +285,55 @@ public class AdoptionController {
                         app.setRejectReason("该宠物已被其他用户领养，感谢您的关注！");
                         app.setReviewTime(LocalDateTime.now());
                         adoptionApplicationService.save(app);
+
+                        // 通知被拒绝的申请者
+                        try {
+                            notificationService.createNotification(
+                                    app.getAdopter().getId(),
+                                    "ADOPTION_REVIEW",
+                                    "领养申请未通过",
+                                    "您申请的宠物【" + pet.getName() + "】已被其他用户领养，感谢您的关注！",
+                                    pet.getId(),
+                                    "系统管理员"
+                            );
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
                     }
+                }
+
+                // 通知申请通过的领养者
+                try {
+                    notificationService.createNotification(
+                            application.getAdopter().getId(),
+                            "ADOPTION_REVIEW",
+                            "领养申请通过",
+                            "恭喜！您的领养申请已通过，请联系救助者完成领养手续。",
+                            pet.getId(),
+                            "系统管理员"
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
 
             } else if ("reject".equals(action)) {
                 application.setStatus(ApplicationStatus.REJECTED);
                 if (reason != null && !reason.trim().isEmpty()) {
                     application.setRejectReason(reason);
+                }
+
+                // 通知申请被拒绝的用户
+                try {
+                    notificationService.createNotification(
+                            application.getAdopter().getId(),
+                            "ADOPTION_REVIEW",
+                            "领养申请未通过",
+                            "您提交的领养申请未通过审核。拒绝理由：" + (reason != null ? reason : "未提供"),
+                            application.getPet().getId(),
+                            "系统管理员"
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             } else {
                 return ResponseEntity.badRequest().body("无效的操作");

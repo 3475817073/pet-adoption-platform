@@ -20,7 +20,7 @@
             <span>宠物发布</span>
           </router-link>
           <router-link to="/help" class="nav-item" :class="{ active: route.path === '/help' }">
-            <span class="nav-icon">💬</span>
+            <span class="nav-icon"></span>
             <span>社区互助</span>
           </router-link>
           <router-link to="/center" class="nav-item" :class="{ active: route.path === '/center' }">

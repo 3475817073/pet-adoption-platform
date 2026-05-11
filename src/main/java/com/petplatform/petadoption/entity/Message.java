@@ -26,8 +26,12 @@ public class Message {
     @JoinColumn(name = "receiver_id", nullable = false)
     private User receiver;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String content;
+
+    // 图片URL（可选）
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
 
     // 是否已读
     @Column(name = "`read`")

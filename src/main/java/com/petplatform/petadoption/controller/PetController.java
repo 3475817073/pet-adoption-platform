@@ -3,12 +3,7 @@ package com.petplatform.petadoption.controller;
 import com.petplatform.petadoption.entity.*;
 import com.petplatform.petadoption.repository.FavoriteRepository;
 import com.petplatform.petadoption.repository.LikeRecordRepository;
-import com.petplatform.petadoption.service.AdoptionApplicationService;
-import com.petplatform.petadoption.service.CommentService;
-import com.petplatform.petadoption.service.HelpPostService;
-import com.petplatform.petadoption.service.PetService;
-import com.petplatform.petadoption.service.UserService;
-import com.petplatform.petadoption.service.VisitRecordService;
+import com.petplatform.petadoption.service.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +35,7 @@ public class PetController {
     private final CommentService commentService;
     private final FavoriteRepository favoriteRepository;
     private final LikeRecordRepository likeRecordRepository;
+    private final NotificationService notificationService;
 
     /**
      * 发布宠物信息
@@ -363,18 +359,44 @@ public class PetController {
                 return ResponseEntity.badRequest().body("宠物不存在");
             }
 
-            if (pet.getReviewStatus() != com.petplatform.petadoption.entity.PostStatus.PENDING) {
+            if (pet.getReviewStatus() != PostStatus.PENDING) {
                 return ResponseEntity.badRequest().body("该宠物已审核，不能重复操作");
             }
 
             if ("approve".equals(action)) {
-                pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.APPROVED);
+                pet.setReviewStatus(PostStatus.APPROVED);
+
+                // 发送通知给发布者
+                try {
+                    notificationService.createNotification(
+                            pet.getRescuer().getId(),
+                            "PET_REVIEW",
+                            "宠物审核通过",
+                            "您发布的宠物【" + pet.getName() + "】已通过审核",
+                            pet.getId(),
+                            "系统"
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             } else if ("reject".equals(action)) {
-                pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.REJECTED);
+                pet.setReviewStatus(PostStatus.REJECTED);
                 if (reason != null && !reason.trim().isEmpty()) {
                     pet.setRejectReason(reason);
                 }
-            } else {
+                try {
+                    notificationService.createNotification(
+                            pet.getRescuer().getId(),
+                            "PET_REVIEW",
+                            "宠物审核未通过",
+                            "您发布的宠物【" + pet.getName() + "】未通过审核。拒绝理由：" + (reason != null ? reason : "未提供"),
+                            pet.getId(),
+                            "系统管理员"
+                    );
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }else {
                 return ResponseEntity.badRequest().body("无效的操作");
             }
 

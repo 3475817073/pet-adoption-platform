@@ -165,6 +165,131 @@
           />
         </div>
       </el-tab-pane>
+
+      <el-tab-pane label="⏰ 待回访" name="pending-visits">
+        <el-alert
+            title="以下领养申请已通过但尚未进行首次回访，请及时跟进"
+            type="warning"
+            :closable="false"            style="margin-bottom: 20px"
+        />
+        <el-table :data="pendingVisitsList" style="width: 100%" v-loading="pendingVisitsLoading">
+          <el-table-column prop="id" label="申请ID" width="100" />
+          <el-table-column label="宠物" width="150">
+            <template #default="{ row }">
+              {{ row.pet?.name || '未知' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="领养人" width="150">
+            <template #default="{ row }">
+              {{ row.adopter?.username || '未知' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="联系方式" width="150">
+            <template #default="{ row }">{{ row.contact || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="领养通过时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.reviewTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="已过去天数" width="120">
+            <template #default="{ row }">
+              <el-tag :type="getDaysSinceApproval(row.reviewTime) > 7 ? 'danger' : 'warning'">
+                {{ getDaysSinceApproval(row.reviewTime) }} 天
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="200">
+            <template #default="{ row }">
+              <el-button
+                  type="primary"
+                  size="small"
+                  @click="showVisitDialog(row)"                  style="background: #E07A5F; border-color: #E07A5F"
+              >
+                首次回访
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-empty v-if="pendingVisitsList.length === 0" description="所有领养申请都已回访" :image-size="150" />
+      </el-tab-pane>
+
+      <!--- 所有回访列表 -->
+      <el-tab-pane label="📋 回访记录" name="all-visits">
+        <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center">
+          <el-alert
+              title="所有回访记录总览，包括管理员回访和领养人反馈"
+              type="info"
+              :closable="false"              style="flex: 1; margin-right: 20px"
+          />
+          <el-button
+              type="primary"
+              @click="loadAllVisits"
+              :icon="Refresh"
+              :loading="allVisitsLoading"
+          >
+            刷新
+          </el-button>
+        </div>
+
+        <el-table :data="allVisitsList" style="width: 100%" v-loading="allVisitsLoading" max-height="600">
+          <el-table-column prop="id" label="ID" width="80" />
+          <el-table-column label="宠物" width="150">
+            <template #default="{ row }">
+              {{ row.application?.pet?.name || '未知' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="领养人" width="120">
+            <template #default="{ row }">
+              {{ row.application?.adopter?.username || '未知' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="回访类型" width="130">
+            <template #default="{ row }">
+              <el-tag
+                  :type="getVisitTypeTag(row.visitType)"
+                  size="small"
+                  :effect="row.visitType === 'USER_FEEDBACK' ? 'dark' : 'light'"
+              >
+                {{ getVisitTypeText(row.visitType) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="宠物状态" width="120">
+            <template #default="{ row }">
+              <el-tag :type="getPetStatusTag(row.petStatus)" size="small">
+                {{ getPetStatusText(row.petStatus) }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="回访人" width="120">
+            <template #default="{ row }">
+              {{ row.visitor?.username || '系统' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="回访时间" width="180">
+            <template #default="{ row }">
+              {{ formatTime(row.visitTime) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="需要跟进" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.needFollowUp" type="danger" size="small">需要</el-tag>
+              <el-tag v-else type="info" size="small">无需</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150">
+            <template #default="{ row }">
+              <el-button type="primary" size="small" @click="viewVisitRecordDetail(row)">详情</el-button>
+              <el-button v-if="row.visitType !== 'USER_FEEDBACK'" type="danger" size="small" @click="deleteVisitRecord(row.id)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <el-empty v-if="allVisitsList.length === 0 && !allVisitsLoading" description="暂无回访记录" :image-size="150" />
+      </el-tab-pane>
+
     </el-tabs>
 
     <!-- 申请详情对话框 -->
@@ -315,7 +440,7 @@
     </el-dialog>
 
     <!-- 查看回访历史弹窗 -->
-    <el-dialog v-model="historyDialogVisible" title="回访历史" width="700px">
+    <el-dialog v-model="historyDialogVisible" title="回访历史" width="800px">
       <div v-if="visitHistory.length === 0" style="text-align: center; padding: 40px; color: #999">
         暂无回访记录
       </div>
@@ -326,11 +451,12 @@
             :timestamp="formatTime(record.visitTime)"
             placement="top"
         >
-          <el-card shadow="hover" class="visit-record-card">
+          <el-card shadow="hover" :class="['visit-record-card', record.visitType === 'USER_FEEDBACK' ? 'user-feedback-card' : '']">
             <div class="visit-record-header">
               <el-tag :type="getVisitTypeTag(record.visitType)" size="small">
                 {{ getVisitTypeText(record.visitType) }}
               </el-tag>
+
               <el-tag :type="getPetStatusTag(record.petStatus)" size="small" style="margin-left: 10px">
                 {{ getPetStatusText(record.petStatus) }}
               </el-tag>
@@ -338,20 +464,29 @@
                 回访人：{{ record.visitor?.username || '管理员' }}
               </span>
             </div>
+
+            <!-- 用户反馈特殊提示 -->
+            <div v-if="record.visitType === 'USER_FEEDBACK'" class="user-feedback-notice">
+              <span> 此反馈由领养人主动提交</span>
+              <el-tag v-if="record.needFollowUp" type="danger" size="small" style="margin-left: 10px">
+                需要帮助
+              </el-tag>
+            </div>
+
             <div v-if="record.content" style="margin-top: 12px">
-              <div style="color: #666; font-size: 13px; margin-bottom: 5px"> 回访内容：</div>
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">📝 回访内容：</div>
               <div style="color: #333; line-height: 1.6">{{ record.content }}</div>
             </div>
             <div v-if="record.feedback" style="margin-top: 12px">
-              <div style="color: #666; font-size: 13px; margin-bottom: 5px"> 领养者反馈：</div>
+              <div style="color: #666; font-size: 13px; margin-bottom: 5px">💬 领养者反馈：</div>
               <div style="color: #333; line-height: 1.6">{{ record.feedback }}</div>
             </div>
             <div v-if="record.needFollowUp && record.nextVisitTime" style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #ddd">
               <span style="color: #E07A5F; font-size: 13px">
-                 下次回访：{{ formatDate(record.nextVisitTime) }}
+                📅 下次回访：{{ formatDate(record.nextVisitTime) }}
               </span>
             </div>
-            <div style="margin-top: 12px; text-align: right">
+            <div v-if="record.visitType !== 'USER_FEEDBACK'" style="margin-top: 12px; text-align: right">
               <el-button type="danger" size="small" text @click="deleteVisitRecord(record.id)">删除</el-button>
             </div>
           </el-card>
@@ -371,11 +506,15 @@ const activeTab = ref('pending')
 const pendingList = ref([])
 const approvedList = ref([])
 const rejectedList = ref([])
+const pendingVisitsList = ref([])
+const allVisitsList = ref([])
 const currentUser = ref(null)
 
 const pendingLoading = ref(false)
 const approvedLoading = ref(false)
 const rejectedLoading = ref(false)
+const pendingVisitsLoading = ref(false)
+const allVisitsLoading = ref(false)
 
 const pendingPage = ref(1)
 const pendingPageSize = ref(10)
@@ -413,6 +552,60 @@ const visitForm = ref({
   nextVisitTime: ''
 })
 
+/**
+ * 计算距离领养通过的天数
+ */
+const getDaysSinceApproval = (reviewTime) => {
+  if (!reviewTime) return 0
+  const reviewDate = new Date(reviewTime)
+  const now = new Date()
+  const diffTime = Math.abs(now - reviewDate)
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+/**
+ * 加载所有回访记录
+ */
+const loadAllVisits = async () => {
+  allVisitsLoading.value = true
+  try {
+    const data = await get('/api/visit/all-records', {
+      username: currentUser.value.username
+    })
+    allVisitsList.value = data
+  } catch (err) {
+    console.error('加载所有回访记录失败:', err)
+  } finally {
+    allVisitsLoading.value = false
+  }
+}
+
+/**
+ * 查看回访记录详情
+ */
+const viewVisitRecordDetail = (record) => {
+  currentApplication.value = record.application
+  visitHistory.value = [record]
+  historyDialogVisible.value = true
+}
+
+/**
+ * 加载待回访列表
+ */
+const loadPendingVisits = async () => {
+  pendingVisitsLoading.value = true
+  try {
+    const data = await get('/api/visit/pending-visits', {
+      username: currentUser.value.username
+    })
+    pendingVisitsList.value = data
+  } catch (err) {
+    console.error('加载待回访列表失败:', err)
+  } finally {
+    pendingVisitsLoading.value = false
+  }
+}
+
 const getCurrentUser = () => {
   const userStr = localStorage.getItem('user')
   if (!userStr) return null
@@ -431,18 +624,22 @@ const formatDate = (time) => {
 
 const getVisitTypeText = (type) => {
   const map = {
+    'USER_FEEDBACK': '用户反馈',
     'PHONE': ' 电话回访',
     'ON_SITE': ' 上门回访',
-    'ONLINE': ' 在线回访'
+    'ONLINE': ' 在线回访',
+    'PLANNED': ' 计划回访'
   }
   return map[type] || type
 }
 
 const getVisitTypeTag = (type) => {
   const map = {
-    'PHONE': 'primary',
-    'ON_SITE': 'success',
-    'ONLINE': 'info'
+    'USER_FEEDBACK': 'primary',
+    'PHONE': 'success',
+    'ON_SITE': 'warning',
+    'ONLINE': 'info',
+    'PLANNED': ''
   }
   return map[type] || ''
 }
@@ -673,6 +870,10 @@ const deleteVisitRecord = (visitId) => {
       if (currentApplication.value) {
         viewVisitHistory(currentApplication.value)
       }
+      // 刷新所有相关列表
+      loadApproved()
+      loadPendingVisits()
+      loadAllVisits()
     } catch (err) {
       error(err.message || '删除失败')
     }
@@ -688,12 +889,16 @@ onMounted(() => {
   loadPending()
   loadApproved()
   loadRejected()
+  loadPendingVisits()
+  loadAllVisits()
 })
 
 watch(activeTab, (newTab) => {
   if (newTab === 'pending') loadPending()
   else if (newTab === 'approved') loadApproved()
-  else loadRejected()
+  else if (newTab === 'rejected') loadRejected()
+  else if (newTab === 'pending-visits') loadPendingVisits()
+  else if (newTab === 'all-visits') loadAllVisits()
 })
 </script>
 
@@ -786,5 +991,22 @@ watch(activeTab, (newTab) => {
 
 .application-detail {
   padding: 10px;
+}
+
+.user-feedback-card {
+  border-left: 4px solid #409EFF;
+  background: linear-gradient(135deg, #F0F7FF 0%, #FFFFFF 100%);
+}
+
+.user-feedback-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  background: #E6F7FF;
+  border-radius: 6px;
+  color: #1890FF;
+  font-size: 13px;
 }
 </style>

@@ -30,6 +30,13 @@ public class VisitRecordService {
     }
 
     /**
+     * 查询所有回访记录（按时间降序）
+     */
+    public List<VisitRecord> findAllOrderByTimeDesc() {
+        return visitRecordRepository.findAllByOrderByVisitTimeDesc();
+    }
+
+    /**
      * 根据回访员 ID 查询其执行的所有回访记录（按时间降序）
      */
     public List<VisitRecord> findByVisitorId(Long visitorId) {
@@ -37,7 +44,7 @@ public class VisitRecordService {
     }
 
     /**
-     * 根据 ID 查找单个回访记录git
+     * 根据 ID 查找单个回访记录
      */
     public VisitRecord findById(Long id) {
         return visitRecordRepository.findById(id).orElse(null);

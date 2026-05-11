@@ -202,7 +202,10 @@
                 </div>
                 <div class="message-bubble">
                   <div class="message-sender">{{ msg.sender.username }}</div>
-                  <div class="message-text">{{ msg.content }}</div>
+                  <div v-if="msg.content" class="message-text">{{ msg.content }}</div>
+                  <div v-if="msg.imageUrl" class="message-image">
+                    <img :src="getImageUrl(msg.imageUrl)" alt="消息图片" @click="previewImage(msg.imageUrl)" />
+                  </div>
                   <div class="message-time">{{ formatMessageTime(msg.createTime) }}</div>
                 </div>
               </template>
@@ -211,7 +214,10 @@
               <template v-else>
                 <div class="message-bubble">
                   <div class="message-sender">{{ msg.sender.username }}</div>
-                  <div class="message-text">{{ msg.content }}</div>
+                  <div v-if="msg.content" class="message-text">{{ msg.content }}</div>
+                  <div v-if="msg.imageUrl" class="message-image">
+                    <img :src="getImageUrl(msg.imageUrl)" alt="消息图片" @click="previewImage(msg.imageUrl)" />
+                  </div>
                   <div class="message-time">{{ formatMessageTime(msg.createTime) }}</div>
                 </div>
                 <div class="message-avatar">
@@ -223,6 +229,12 @@
 
           <!-- 抽屉底部：消息输入框（固定） -->
           <div class="drawer-footer">
+            <!-- 图片预览区 -->
+            <div v-if="previewImageUrl" class="image-preview">
+              <img :src="getImageUrl(previewImageUrl)" alt="预览图片" />
+              <button class="remove-image-btn" @click="removePreviewImage">✕</button>
+            </div>
+
             <div class="message-input-box">
               <el-input
                   v-model="messageContent"
@@ -233,8 +245,24 @@
                   @keyup.ctrl.enter="sendMessage"
               />
               <div class="input-footer">
-                <span class="tip">按 Ctrl + Enter 发送</span>
-                <el-button type="primary" :disabled="!messageContent.trim()" @click="sendMessage" class="send-btn">
+                <div class="input-tools">
+                  <label class="upload-image-btn" :class="{ 'has-image': previewImageUrl }">
+                    +
+                    <input
+                        type="file"
+                        accept="image/*"
+                        @change="handleImageSelect"                      style="display: none"
+                    />
+                  </label>
+                  <span class="tip">按 Ctrl + Enter 发送</span>
+                </div>
+                <el-button
+                    type="primary"
+                    :disabled="!messageContent.trim() && !previewImageUrl"
+                    @click="sendMessage"
+                    class="send-btn"
+                    :loading="messageLoading"
+                >
                   发送
                 </el-button>
               </div>
@@ -274,6 +302,10 @@ const messageLoading = ref(false)
 const messagesLoading = ref(false)
 const messages = ref([])
 const currentUser = ref(null)
+const previewImageUrl = ref('')
+const uploadedImageUrl = ref(null)
+const selectedImageFile = ref(null)
+const uploadingImage = ref(false)
 
 // 宠物分页和搜索
 const petSearchKeyword = ref('')
@@ -410,8 +442,14 @@ const openMessageDialog = async () => {
   }
 
   showMessageDialog.value = true
+  previewImageUrl.value = ''
+  selectedImageFile.value = null
+  uploadedImageUrl.value = null
+  uploadingImage.value = false
+  messageContent.value = ''
   await loadMessages()
 }
+
 
 /**
  * 加载消息记录
@@ -441,33 +479,28 @@ const loadMessages = async () => {
  * 发送私信
  */
 const sendMessage = async () => {
-  if (!messageContent.value.trim()) {
-    warning('请输入消息内容')
+  if (!messageContent.value.trim() && !previewImageUrl.value) {
+    warning('请输入消息内容或选择图片')
     return
   }
 
   messageLoading.value = true
-  const currentUser = getCurrentUser()
-
-  console.log('当前用户:', currentUser)
-  console.log('接收者用户名:', route.params.username)
-  console.log('消息内容:', messageContent.value)
-  console.log('发送消息参数:', {
-    senderUsername: currentUser?.username,
-    receiverUsername: route.params.username,
-    content: messageContent.value
-  })
+  const user = getCurrentUser()
 
   try {
     const response = await post('/api/message/send', {
-      senderUsername: currentUser.username,
+      senderUsername: user.username,
       receiverUsername: route.params.username,
-      content: messageContent.value
+      content: messageContent.value.trim() || null,
+      imageUrl: uploadedImageUrl.value || null
     })
 
     // 将新消息添加到列表
     messages.value.push(response)
     messageContent.value = ''
+    previewImageUrl.value = ''
+    selectedImageFile.value = null
+    uploadedImageUrl.value = null
 
     // 滚动到底部
     await nextTick()
@@ -482,6 +515,90 @@ const sendMessage = async () => {
     messageLoading.value = false
   }
 }
+
+/**
+ * 处理图片选择
+ */
+const handleImageSelect = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  // 验证文件类型
+  if (!file.type.startsWith('image/')) {
+    warning('请选择图片文件')
+    return
+  }
+
+  // 验证文件大小（限制10MB）
+  if (file.size > 10 * 1024 * 1024) {
+    warning('图片大小不能超过10MB')
+    return
+  }
+
+  selectedImageFile.value = file
+  uploadingImage.value = true
+
+  try {
+    // 先上传到服务器获取URL
+    const uploadResult = await uploadImageToServer(file)
+    uploadedImageUrl.value = uploadResult.url
+    previewImageUrl.value = uploadResult.url
+  } catch (err) {
+    console.error('图片上传失败:', err)
+    error(err.message || '图片上传失败')
+    selectedImageFile.value = null
+    previewImageUrl.value = ''
+  } finally {
+    uploadingImage.value = false
+    event.target.value = ''
+  }
+}
+
+/**
+ * 上传图片到服务器
+ */
+const uploadImageToServer = async (file) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const response = await fetch('http://localhost:8080/api/upload/image', {
+    method: 'POST',
+    body: formData
+  })
+
+  if (!response.ok) {
+    const errorMsg = await response.text()
+    throw new Error(errorMsg || '上传失败')
+  }
+
+  return await response.json()
+}
+
+/**
+ * 处理图片URL（补全相对路径）
+ */
+const getImageUrl = (url) => {
+  if (!url) return ''
+  return url.startsWith('http') ? url : 'http://localhost:8080' + url
+}
+
+/**
+ * 预览图片
+ */
+const previewImage = (imageUrl) => {
+  window.open(getImageUrl(imageUrl), '_blank')
+}
+
+
+/**
+ * 移除预览图片
+ */
+const removePreviewImage = () => {
+  previewImageUrl.value = ''
+  selectedImageFile.value = null
+  uploadedImageUrl.value = null
+}
+
 
 /**
  * 滚动到底部
@@ -1072,37 +1189,130 @@ onMounted(() => {
 
 .message-time {
   font-size: 11px;
-  color: #999;
-  margin-top: 4px;
+  margin-top: 6px;
+  opacity: 0.6;
+  text-align: right;
 }
 
-.message-item.message-self .message-time {
-  color: rgba(255,255,255,0.7);
+.message-image {
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
 }
 
+.message-image img {
+  max-width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  display: block;
+  border-radius: 8px;
+  transition: transform 0.2s;
+}
+
+.message-image img:hover {
+  transform: scale(1.02);
+}
 
 .drawer-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #eee;
-  background: #fff;
-  flex-shrink: 0;
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.image-preview {
+  position: relative;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+}
+
+.image-preview img {
+  max-width: 100%;
+  max-height: 150px;
+  display: block;
+  object-fit: cover;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.remove-image-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .message-input-box {
-  margin-bottom: 0;
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #e5e7eb;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.message-input-box:focus-within {
+  border-color: #E07A5F;
+}
+
+.message-input-box :deep(.el-textarea__inner) {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 12px 16px;
+  resize: none;
 }
 
 .input-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
+  padding: 8px 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.input-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-image-btn {
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.upload-image-btn:hover {
+  background: #f3f4f6;
+}
+
+.upload-image-btn.has-image {
+  background: #E07A5F;
+  color: white;
 }
 
 .tip {
   font-size: 12px;
   color: #999;
 }
+
 
 .send-btn {
   background: #E07A5F;

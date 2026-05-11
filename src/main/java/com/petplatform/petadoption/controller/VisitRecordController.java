@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 回访记录控制器
@@ -24,6 +25,7 @@ public class VisitRecordController {
     private final VisitRecordService visitRecordService;
     private final AdoptionApplicationService adoptionApplicationService;
     private final UserService userService;
+    private final AdoptionApplicationService applicationService;
 
     /**
      * 添加回访记录
@@ -94,6 +96,25 @@ public class VisitRecordController {
     }
 
     /**
+     * 查询所有回访记录（管理员使用）
+     */
+    @GetMapping("/all-records")
+    public ResponseEntity<?> getAllVisitRecords(@RequestParam String username) {
+        try {
+            User user = userService.findByUsername(username);
+            if (user == null || user.getRole() != Role.ADMIN) {
+                return ResponseEntity.badRequest().body("无权限");
+            }
+
+            List<VisitRecord> records = visitRecordService.findAllOrderByTimeDesc();
+            return ResponseEntity.ok(records);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("查询失败：" + e.getMessage());
+        }
+    }
+
+
+    /**
      * 删除指定的回访记录（仅限管理员）
      */
     @DeleteMapping("/{id}")
@@ -112,4 +133,31 @@ public class VisitRecordController {
             return ResponseEntity.badRequest().body("删除失败：" + e.getMessage());
         }
     }
+
+    /**
+     * 获取需要回访的领养申请列表
+     * 规则：领养通过后30天内未进行首次回访的记录
+     */
+    @GetMapping("/pending-visits")
+    public ResponseEntity<?> getPendingVisits(@RequestParam String username) {
+        User user = userService.findByUsername(username);
+        if (user == null || user.getRole() != Role.ADMIN) {
+            return ResponseEntity.badRequest().body("无权限");
+        }
+
+        List<AdoptionApplication> approvedApps =
+                applicationService.findByStatus(ApplicationStatus.APPROVED);
+
+        // 筛选出还没有回访记录的申请
+        List<AdoptionApplication> needVisit = approvedApps.stream()
+                .filter(app -> {
+                    List<VisitRecord> visits =
+                            visitRecordService.findByApplicationId(app.getId());
+                    return visits.isEmpty(); // 没有任何回访记录
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(needVisit);
+    }
 }
+
