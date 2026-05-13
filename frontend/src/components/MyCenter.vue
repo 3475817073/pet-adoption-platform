@@ -5,9 +5,17 @@
     <el-card style="max-width: 1200px; margin: 20px auto; border-radius: 16px">
       <div class="user-profile">
         <div class="avatar-section">
-          <div class="avatar-circle">{{ user?.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
+          <el-upload class="avatar-uploader" action="http://localhost:8080/api/upload/image"
+                     :show-file-list="false" :on-success="handleAvatarUpload" :before-upload="beforeAvatarUpload">
+            <img v-if="user?.avatar" :src="getAvatarUrl(user.avatar)" class="avatar-circle" />
+            <div v-else class="avatar-circle">{{ user?.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
+            <div class="avatar-overlay"><span></span></div>
+          </el-upload>
+
           <h2>{{ user?.username || '未登录' }}</h2>
           <el-tag :type="getRoleColor(user?.role)" size="large">{{ getRoleText(user?.role) }}</el-tag>
+          <p v-if="user?.bio" class="user-bio">{{ user.bio }}</p>
+
         </div>
         <div class="stats-section">
           <div class="stat-item">
@@ -30,6 +38,11 @@
             <div class="stat-number">{{ followingCount }}</div>
             <div class="stat-label">关注</div>
           </div>
+          <div class="stat-item action-item" @click="openEditDialog">
+            <div class="action-icon"></div>
+            <div class="action-label">编辑个人资料</div>
+          </div>
+
 
         </div>
       </div>
@@ -539,7 +552,8 @@
             class="user-list-item"
             @click="goToUserProfile(item.user.username)"
         >
-          <div class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
+          <el-image v-if="item.user.avatar" :src="getAvatarUrl(item.user.avatar)" class="user-avatar" fit="cover" />
+          <div v-else class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
           <div class="user-name">{{ item.user.username }}</div>
           <el-tag :type="getRoleColor(item.user.role)" size="small">{{ getRoleText(item.user.role) }}</el-tag>
         </div>
@@ -557,7 +571,8 @@
             class="user-list-item"
             @click="goToUserProfile(item.user.username)"
         >
-          <div class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
+          <el-image v-if="item.user.avatar" :src="getAvatarUrl(item.user.avatar)" class="user-avatar" fit="cover" />
+          <div v-else class="user-avatar">{{ item.user.username.charAt(0).toUpperCase() }}</div>
           <div class="user-name">{{ item.user.username }}</div>
           <el-tag :type="getRoleColor(item.user.role)" size="small">{{ getRoleText(item.user.role) }}</el-tag>
         </div>
@@ -825,6 +840,32 @@
       </template>
     </el-dialog>
 
+    <!-- 编辑个人资料对话框 -->
+    <el-dialog v-model="profileDialogVisible" title="编辑资料" width="600px">
+      <el-form :model="profileForm" label-width="100px">
+        <el-form-item label="头像">
+          <el-upload action="http://localhost:8080/api/upload/image" :show-file-list="false"
+                     :on-success="handleAvatarUpload" :before-upload="beforeAvatarUpload">
+            <img v-if="profileForm.avatar" :src="getAvatarUrl(profileForm.avatar)" class="dialog-avatar" />
+            <div v-else class="dialog-avatar"></div>
+            <div style="margin-top:10px;color:#999;font-size:13px">点击更换</div>
+          </el-upload>
+        </el-form-item>
+        <el-form-item label="个人简介">
+          <el-input v-model="profileForm.bio" type="textarea" :rows="3" placeholder="介绍一下自己" maxlength="500" show-word-limit />
+        </el-form-item>
+        <el-divider>修改密码</el-divider>
+        <el-form-item label="原密码"><el-input v-model="profileForm.oldPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="新密码"><el-input v-model="profileForm.newPassword" type="password" show-password /></el-form-item>
+        <el-form-item label="确认密码"><el-input v-model="profileForm.confirmPassword" type="password" show-password /></el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="profileDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveProfile" :loading="savingProfile">保存</el-button>
+      </template>
+    </el-dialog>
+
+
     <!-- 查看反馈历史对话框 -->
     <el-dialog v-model="feedbackHistoryDialogVisible" title="反馈历史" width="800px">
       <div v-if="feedbackHistoryLoading" class="loading-container">
@@ -989,6 +1030,61 @@ const stats = ref({
   rejectedPosts: 0
 })
 
+// 编辑个人资料
+const profileDialogVisible = ref(false)
+const savingProfile = ref(false)
+const profileForm = ref({ avatar: '', bio: '', oldPassword: '', newPassword: '', confirmPassword: '' })
+
+const getAvatarUrl = (url) => url && !url.startsWith('http') ? 'http://localhost:8080' + url : url
+
+const beforeAvatarUpload = (file) => {
+  if (!file.type.startsWith('image/')) { error('只能上传图片'); return false }
+  if (file.size / 1024 / 1024 > 2) { error('图片不能超过2MB'); return false }
+  return true
+}
+
+const handleAvatarUpload = (res) => {
+  if (res?.url) {
+    user.value.avatar = res.url;           // 同步更新用户卡片
+    profileForm.value.avatar = res.url;    // 同步更新对话框
+    success('头像上传成功');
+  }
+}
+
+
+const openEditDialog = () => {
+  profileForm.value = { avatar: user.value?.avatar || '', bio: user.value?.bio || '', oldPassword: '', newPassword: '', confirmPassword: '' }
+  profileDialogVisible.value = true
+}
+
+const saveProfile = async () => {
+  if (profileForm.value.newPassword) {
+    if (!profileForm.value.oldPassword) { warning('需输入原密码'); return }
+    if (profileForm.value.newPassword.length < 6) { warning('密码至少6位'); return }
+    if (profileForm.value.newPassword !== profileForm.value.confirmPassword) { warning('两次密码不一致'); return }
+  }
+  savingProfile.value = true
+  try {
+    const data = { username: user.value.username, avatar: profileForm.value.avatar, bio: profileForm.value.bio }
+    if (profileForm.value.newPassword) {
+      data.oldPassword = profileForm.value.oldPassword
+      data.newPassword = profileForm.value.newPassword
+    }
+    const updated = await put('/api/user/update-profile', data)
+    localStorage.setItem('user', JSON.stringify(updated))
+    user.value = updated
+    success('修改成功')
+    profileDialogVisible.value = false
+    if (profileForm.value.newPassword) {
+      setTimeout(() => { localStorage.removeItem('user'); router.push('/login') }, 1500)
+    }
+  } catch (err) { error(err.message) }
+  finally { savingProfile.value = false }
+}
+
+
+
+
 /**
  * 计算百分比
  */
@@ -1098,9 +1194,7 @@ const truncateContent = (content, maxLength) => {
   return content.substring(0, maxLength) + '...'
 }
 
-/**
- * 获取活动类型对应的颜色
- */
+
 /**
  * 获取活动类型对应的颜色
  */
@@ -1249,7 +1343,15 @@ const loadUserData = async () => {
   }
 
   try {
-    user.value = JSON.parse(userStr)
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const localUser = JSON.parse(userStr)
+      // 从服务器拉取最新用户信息（包含头像、简介）
+      const freshUser = await get(`/api/user/profile/${localUser.username}`)
+      user.value = { ...localUser, ...freshUser }
+      // 同步到 localStorage
+      localStorage.setItem('user', JSON.stringify(user.value))
+    }
     const username = user.value.username
 
     // 加载我的发布（分页）
@@ -2044,10 +2146,34 @@ onMounted(() => {
   font-weight: bold;
 }
 
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-bio {
+  margin: 0;
+  font-size: 13px;
+  color: #999;
+  max-width: 300px;
+  line-height: 1.5;
+}
+
 .avatar-section h2 {
   margin: 0;
   color: #333;
 }
+
+.avatar-uploader { position: relative; cursor: pointer }
+.avatar-overlay { position: absolute; top: 0; left: 0; width: 80px; height: 80px; border-radius: 50%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s }
+.avatar-uploader:hover .avatar-overlay { opacity: 1 }
+.action-item { cursor: pointer; padding: 10px; border-radius: 8px; transition: all 0.3s }
+.action-item:hover { background: #FFF9F0; transform: translateY(-2px) }
+.action-icon { font-size: 24px }
+.action-label { font-size: 14px; color: #FF7E5F; font-weight: 600; margin-top: 5px }
+.dialog-avatar { width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #FF7E5F, #6EE7B7); display: flex; align-items: center; justify-content: center; font-size: 40px; margin: 0 auto; cursor: pointer }
+
 
 .stats-section {
   display: flex;

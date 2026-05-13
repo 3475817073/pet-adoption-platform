@@ -27,6 +27,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Role role;           // 角色
 
+
+    private String avatar;//头像
+
+    @Column(columnDefinition = "TEXT")
+    private String bio;//简介
+
+
     private LocalDateTime createTime = LocalDateTime.now();
 }
 

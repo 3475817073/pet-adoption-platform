@@ -80,12 +80,13 @@ public class FollowController {
                 Map<String, Object> map = new HashMap<>();
                 map.put("id", follow.getId());
                 map.put("createTime", follow.getCreateTime());
-                
+
                 User follower = follow.getFollower();
                 map.put("user", Map.of(
                         "id", follower.getId(),
                         "username", follower.getUsername(),
-                        "role", follower.getRole()
+                        "role", follower.getRole(),
+                        "avatar", follower.getAvatar()
                 ));
                 
                 return map;
@@ -119,7 +120,8 @@ public class FollowController {
                 map.put("user", Map.of(
                         "id", followedUser.getId(),
                         "username", followedUser.getUsername(),
-                        "role", followedUser.getRole()
+                        "role", followedUser.getRole(),
+                        "avatar", followedUser.getAvatar()
                 ));
                 
                 return map;

@@ -17,13 +17,16 @@
       <el-card class="user-card" shadow="hover">
         <div class="user-header">
           <div class="avatar-section">
-            <div class="avatar-circle">{{ userData.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
+            <el-image v-if="userData?.avatar" :src="getImageUrl(userData.avatar)" class="avatar-circle" fit="cover" />
+            <div v-else class="avatar-circle">{{ userData.username?.charAt(0)?.toUpperCase() || 'U' }}</div>
             <div class="user-info">
               <h2 class="username">{{ userData.username }}</h2>
               <el-tag :type="getRoleColor(userData.role)" size="large">{{ getRoleText(userData.role) }}</el-tag>
+              <p v-if="userData?.bio" class="bio-text">{{ userData.bio }}</p>
               <span class="join-time">加入于 {{ formatDate(userData.createTime) }}</span>
             </div>
           </div>
+
 
           <div class="action-section">
             <!-- 如果不是当前登录用户，显示关注和私信按钮 -->
@@ -878,6 +881,13 @@ onMounted(() => {
 .join-time {
   font-size: 12px;
   color: #999;
+}
+
+.bio-text {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
 }
 
 .interaction-buttons {

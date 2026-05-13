@@ -77,6 +77,8 @@ public class UserController {
             result.put("username", user.getUsername());
             result.put("realName", user.getRealName());
             result.put("role", user.getRole());
+            result.put("avatar", user.getAvatar());
+            result.put("bio", user.getBio());
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
@@ -101,6 +103,8 @@ public class UserController {
             result.put("username", user.getUsername());
             result.put("realName", user.getRealName());
             result.put("role", user.getRole());
+            result.put("avatar", user.getAvatar());
+            result.put("bio", user.getBio());
             result.put("createTime", user.getCreateTime());
 
             return ResponseEntity.ok(result);
@@ -164,5 +168,34 @@ public class UserController {
             return ResponseEntity.status(500).body("删除失败：" + e.getMessage());
         }
     }
+
+    @PutMapping("/update-profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> request) {
+        String username = request.get("username");
+        User user = userService.findByUsername(username);
+        if (user == null) return ResponseEntity.badRequest().body("用户不存在");
+
+        if (request.containsKey("avatar") && request.get("avatar") != null && !request.get("avatar").isEmpty()) {
+            user.setAvatar(request.get("avatar"));
+        }
+        if (request.containsKey("bio") && request.get("bio") != null && !request.get("bio").isEmpty()) {
+            user.setBio(request.get("bio"));
+        }
+
+        if (request.containsKey("newPassword")) {
+            String oldPassword = request.get("oldPassword");
+            String newPassword = request.get("newPassword");
+            if (oldPassword != null && !passwordEncoder.matches(oldPassword, user.getPassword())) {
+                return ResponseEntity.status(401).body("原密码错误");
+            }
+            if (newPassword.length() < 6) return ResponseEntity.badRequest().body("密码至少6位");
+            user.setPassword(passwordEncoder.encode(newPassword));
+        }
+
+        userService.save(user);
+        return ResponseEntity.ok(user);
+    }
+
+
 
 }
