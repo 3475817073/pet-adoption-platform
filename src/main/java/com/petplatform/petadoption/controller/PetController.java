@@ -44,7 +44,7 @@ public class PetController {
     @PostMapping("/publish")
     public ResponseEntity<?> publish(@RequestBody Map<String, Object> request) {
         try {
-            // 校验救助者身份
+            // 校验用户身份
             String username = (String) request.get("username");
             if (username == null || username.isEmpty()) {
                 return ResponseEntity.badRequest().body("用户名不能为空");
@@ -86,7 +86,6 @@ public class PetController {
             if (request.get("photoUrl") != null) {
                 pet.setPhotoUrl((String) request.get("photoUrl"));
             }
-
             // 处理图片列表信息
             if (request.get("photoUrls") != null) {
                 pet.setPhotoUrls((String) request.get("photoUrls"));
@@ -95,7 +94,6 @@ public class PetController {
             if (request.get("tags") != null) {
                 pet.setTags((String) request.get("tags"));
             }
-
             // 处理健康状态（支持Boolean和String类型）
             Object vaccinatedObj = request.get("isVaccinated");
             if (vaccinatedObj != null) {
@@ -111,15 +109,11 @@ public class PetController {
             if (dewormedObj != null) {
                 pet.setDewormed(Boolean.valueOf(dewormedObj.toString()));
             }
-
-
             // 设置关联关系和初始状态
             pet.setRescuer(rescuer);
             pet.setStatus(PetStatus.AVAILABLE);
             pet.setReviewStatus(com.petplatform.petadoption.entity.PostStatus.PENDING);
-
             petService.save(pet);
-
             return ResponseEntity.ok("发布成功，请等待管理员审核");
         } catch (Exception e) {
             e.printStackTrace();

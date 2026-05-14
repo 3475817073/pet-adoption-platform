@@ -54,5 +54,6 @@ public interface HelpPostRepository extends JpaRepository<HelpPost, Long> {
      */
     List<HelpPost> findByRelatedPetId(Long relatedPetId);
 
+    long countByStatus(PostStatus status);
 
 }

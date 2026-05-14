@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -32,46 +31,35 @@ public class AdminController {
 
         Map<String, Object> stats = new HashMap<>();
 
-        // 宠物统计
-        List<Pet> allPets = petRepository.findAll();
-        stats.put("totalPets", allPets.size());
-        stats.put("pendingPets", allPets.stream()
-            .filter(p -> p.getReviewStatus() == PostStatus.PENDING).count());
-        stats.put("approvedPets", allPets.stream()
-            .filter(p -> p.getReviewStatus() == PostStatus.APPROVED).count());
-        stats.put("rejectedPets", allPets.stream()
-            .filter(p -> p.getReviewStatus() == PostStatus.REJECTED).count());
+        // 宠物统计 - 使用数据库层面聚合查询
+        long totalPets = petRepository.count();
+        long catPets = petRepository.countByType("猫");
+        long dogPets = petRepository.countByType("狗");
+
+        stats.put("totalPets", totalPets);
+        stats.put("pendingPets", petRepository.countByReviewStatus(PostStatus.PENDING));
+        stats.put("approvedPets", petRepository.countByReviewStatus(PostStatus.APPROVED));
+        stats.put("rejectedPets", petRepository.countByReviewStatus(PostStatus.REJECTED));
 
         // 宠物类型统计
-        stats.put("catPets", allPets.stream()
-            .filter(p -> "猫".equals(p.getType())).count());
-        stats.put("dogPets", allPets.stream()
-            .filter(p -> "狗".equals(p.getType())).count());
-        stats.put("otherPets", allPets.stream()
-            .filter(p -> !"猫".equals(p.getType()) && !"狗".equals(p.getType())).count());
+        stats.put("catPets", catPets);
+        stats.put("dogPets", dogPets);
+        stats.put("otherPets", totalPets - catPets - dogPets);
 
         // 用户统计
         stats.put("totalUsers", userRepository.count());
 
-        // 申请统计
-        List<AdoptionApplication> allApps = applicationRepository.findAll();
-        stats.put("totalApplications", allApps.size());
-        stats.put("pendingApps", allApps.stream()
-            .filter(a -> a.getStatus() == ApplicationStatus.PENDING).count());
-        stats.put("approvedApps", allApps.stream()
-            .filter(a -> a.getStatus() == ApplicationStatus.APPROVED).count());
-        stats.put("rejectedApps", allApps.stream()
-            .filter(a -> a.getStatus() == ApplicationStatus.REJECTED).count());
+        // 申请统计 - 使用数据库层面聚合查询
+        stats.put("totalApplications", applicationRepository.count());
+        stats.put("pendingApps", applicationRepository.countByStatus(ApplicationStatus.PENDING));
+        stats.put("approvedApps", applicationRepository.countByStatus(ApplicationStatus.APPROVED));
+        stats.put("rejectedApps", applicationRepository.countByStatus(ApplicationStatus.REJECTED));
 
-        // 帖子统计
-        List<HelpPost> allPosts = helpPostRepository.findAll();
-        stats.put("totalPosts", allPosts.size());
-        stats.put("pendingPosts", allPosts.stream()
-            .filter(p -> p.getStatus() == PostStatus.PENDING).count());
-        stats.put("approvedPosts", allPosts.stream()
-            .filter(p -> p.getStatus() == PostStatus.APPROVED).count());
-        stats.put("rejectedPosts", allPosts.stream()
-            .filter(p -> p.getStatus() == PostStatus.REJECTED).count());
+        // 帖子统计 - 使用数据库层面聚合查询
+        stats.put("totalPosts", helpPostRepository.count());
+        stats.put("pendingPosts", helpPostRepository.countByStatus(PostStatus.PENDING));
+        stats.put("approvedPosts", helpPostRepository.countByStatus(PostStatus.APPROVED));
+        stats.put("rejectedPosts", helpPostRepository.countByStatus(PostStatus.REJECTED));
 
         return ResponseEntity.ok(stats);
     }

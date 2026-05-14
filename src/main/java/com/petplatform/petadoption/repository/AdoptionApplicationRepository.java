@@ -35,4 +35,10 @@ public interface AdoptionApplicationRepository extends JpaRepository<AdoptionApp
      * 根据状态查询所有申请记录
      */
     List<AdoptionApplication> findByStatus(ApplicationStatus status);
+
+    /**
+     * 根据状态统计申请数量
+     */
+    long countByStatus(ApplicationStatus status);
+
 }
