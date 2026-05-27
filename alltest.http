@@ -1,0 +1,631 @@
+### ========================================
+### 6.2.1 用户管理模块测试
+### ========================================
+
+### TC-REG-001: 正常注册USER角色
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "password": "123456",
+  "realName": "张三",
+  "phone": "13800138001"
+}
+
+### TC-REG-002: 用户名重复注册(应返回400)
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "password": "123456",
+  "realName": "李四",
+  "phone": "13800138002"
+}
+
+### TC-REG-003: 手机号格式错误(应返回400)
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser002",
+  "password": "123456",
+  "realName": "王五",
+  "phone": "02345678901"
+}
+
+### TC-REG-004: 手机号为空(应成功)
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser003",
+  "password": "123456",
+  "realName": "赵六",
+  "phone": ""
+}
+
+### TC-REG-005: 密码为空(应返回500)
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "testuser004",
+  "password": "",
+  "realName": "孙七",
+  "phone": "13800138004"
+}
+
+### TC-LOG-001: 正常登录(USER角色)
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "password": "123456"
+}
+
+### TC-LOG-002: 用户名不存在(应返回401)
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "username": "nonexistent",
+  "password": "123456"
+}
+
+### TC-LOG-003: 密码错误(应返回401)
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "password": "wrongpassword"
+}
+
+### TC-PROF-001: 修改头像和简介
+PUT http://localhost:8080/api/user/update-profile
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "avatar": "/uploads/avatar.jpg",
+  "bio": "这是我的简介"
+}
+
+### TC-PROF-002: 修改密码(原密码正确)
+PUT http://localhost:8080/api/user/update-profile
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "oldPassword": "123456",
+  "newPassword": "654321"
+}
+
+### TC-PROF-003: 修改密码(原密码错误,应返回401)
+PUT http://localhost:8080/api/user/update-profile
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "oldPassword": "wrong",
+  "newPassword": "654321"
+}
+
+### TC-PROF-004: 新密码长度不足6位(应返回400)
+PUT http://localhost:8080/api/user/update-profile
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "oldPassword": "654321",
+  "newPassword": "123"
+}
+
+### ========================================
+### 6.2.2 宠物管理模块测试
+### ========================================
+
+### TC-PET-001: 正常发布宠物
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小橘",
+  "type": "猫",
+  "gender": "母",
+  "age": 2,
+  "description": "性格温顺",
+  "username": "testuser001"
+}
+
+### TC-PET-002: 发布宠物(含图片URL)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小黑",
+  "type": "狗",
+  "gender": "公",
+  "age": 3,
+  "description": "活泼可爱",
+  "photoUrl": "http://example.com/dog.jpg",
+  "username": "testuser001"
+}
+
+### TC-PET-003: 发布宠物(含健康状态)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小白",
+  "type": "猫",
+  "gender": "母",
+  "age": 1,
+  "description": "已疫苗已绝育",
+  "isVaccinated": true,
+  "isNeutered": true,
+  "isDewormed": false,
+  "username": "testuser001"
+}
+
+### TC-PET-004: 宠物名称为空(应返回400)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "",
+  "type": "猫",
+  "description": "测试",
+  "username": "testuser001"
+}
+
+### TC-PET-005: 宠物种类为空(应返回400)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小橘",
+  "type": "",
+  "description": "测试",
+  "username": "testuser001"
+}
+
+### TC-PET-006: 用户不存在(应返回400)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小橘",
+  "type": "猫",
+  "description": "测试",
+  "username": "nonexistent"
+}
+
+### TC-PET-007: 年龄字段为字符串
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小黄",
+  "type": "狗",
+  "gender": "公",
+  "age": "3",
+  "description": "测试",
+  "username": "testuser001"
+}
+
+### TC-PET-008: 年龄字段缺失(应使用默认值1)
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "小小",
+  "type": "猫",
+  "gender": "母",
+  "description": "测试",
+  "username": "testuser001"
+}
+
+### 查询刚发布的宠物ID(假设ID为1,实际使用时替换为真实ID)
+GET http://localhost:8080/api/pet/1
+
+### TC-EDIT-001: 发布者正常编辑
+PUT http://localhost:8080/api/pet/1
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "name": "小橘(已编辑)"
+}
+
+### TC-EDIT-002: 非发布者尝试编辑(应返回400)
+PUT http://localhost:8080/api/pet/1
+Content-Type: application/json
+
+{
+  "username": "testuser002",
+  "name": "被篡改的名字"
+}
+
+### TC-EDIT-003: 编辑不存在的宠物(应返回400)
+PUT http://localhost:8080/api/pet/99999
+Content-Type: application/json
+
+{
+  "username": "testuser001",
+  "name": "测试"
+}
+
+### TC-DEL-001: 发布者删除宠物
+DELETE http://localhost:8080/api/pet/1?username=testuser001
+
+### ========================================
+### 6.2.3 领养申请模块测试
+### ========================================
+
+### 先发布一个宠物用于测试领养申请
+POST http://localhost:8080/api/pet/publish
+Content-Type: application/json
+
+{
+  "name": "待领养宠物",
+  "type": "猫",
+  "gender": "母",
+  "age": 2,
+  "description": "等待领养",
+  "username": "testuser001"
+}
+
+### 注册一个领养者
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "adopter001",
+  "password": "123456",
+  "realName": "领养者",
+  "phone": "13800138010"
+}
+
+### TC-APP-001: 正常提交申请(假设宠物ID为2)
+POST http://localhost:8080/api/adoption/apply
+Content-Type: application/json
+
+{
+  "petId": 2,
+  "username": "adopter001",
+  "reason": "非常喜欢这只猫",
+  "contact": "13800138002",
+  "residenceType": "自有住房",
+  "housingArea": 80,
+  "petExperience": "养过2年猫",
+  "hasOtherPets": false,
+  "otherPetsInfo": ""
+}
+
+### TC-APP-002: 对已被领养的宠物提交申请(需先手动将宠物状态改为ADOPTED)
+POST http://localhost:8080/api/adoption/apply
+Content-Type: application/json
+
+{
+  "petId": 999,
+  "username": "adopter001",
+  "reason": "测试",
+  "contact": "13800138002"
+}
+
+### TC-APP-003: 宠物不存在(应返回400)
+POST http://localhost:8080/api/adoption/apply
+Content-Type: application/json
+
+{
+  "petId": 99999,
+  "username": "adopter001",
+  "reason": "测试",
+  "contact": "13800138002"
+}
+
+### TC-APP-004: 用户不存在(应返回400)
+POST http://localhost:8080/api/adoption/apply
+Content-Type: application/json
+
+{
+  "petId": 2,
+  "username": "nonexistent",
+  "reason": "测试",
+  "contact": "13800138002"
+}
+
+### 注册管理员用于审核
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "admin001",
+  "password": "admin123",
+  "realName": "管理员",
+  "phone": "13800138999"
+}
+
+### 查询待审核申请列表
+GET http://localhost:8080/api/adoption/pending?username=admin001&page=0&size=10
+
+### TC-REVAPP-001: 管理员通过第一个申请(假设申请ID为1)
+POST http://localhost:8080/api/adoption/review/1?username=admin001&action=approve
+
+### TC-REVAPP-002: 管理员尝试通过第二个申请(并发冲突,应返回400)
+POST http://localhost:8080/api/adoption/review/2?username=admin001&action=approve
+
+### TC-REVAPP-003: 管理员拒绝申请
+POST http://localhost:8080/api/adoption/review/3?username=admin001&action=reject&reason=住房面积太小
+
+### TC-REVAPP-004: 重复审核已通过申请(应返回400)
+POST http://localhost:8080/api/adoption/review/1?username=admin001&action=approve
+
+### TC-REVAPP-005: 无效的操作参数(应返回400)
+POST http://localhost:8080/api/adoption/review/1?username=admin001&action=invalid
+
+### ========================================
+### 6.2.4 互助社区模块测试
+### ========================================
+
+### TC-POST-001: 正常发布帖子
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "寻找丢失的猫咪",
+  "content": "详细描述...",
+  "category": "寻宠启事",
+  "username": "testuser001"
+}
+
+### TC-POST-002: 发布带城市的帖子
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "北京流浪猫救助",
+  "content": "详细描述...",
+  "category": "救助信息",
+  "city": "北京",
+  "username": "testuser001"
+}
+
+### TC-POST-003: 发布关联宠物的帖子(假设宠物ID为1)
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "小橘的成长日记",
+  "content": "详细描述...",
+  "category": "经验分享",
+  "relatedPetId": 1,
+  "username": "testuser001"
+}
+
+### TC-POST-004: 标题为空(应返回400)
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "",
+  "content": "测试",
+  "category": "经验分享",
+  "username": "testuser001"
+}
+
+### TC-POST-005: 内容为空字符串(应返回400)
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "测试",
+  "content": "  ",
+  "category": "经验分享",
+  "username": "testuser001"
+}
+
+### TC-POST-006: 城市字段为字符串"null"
+POST http://localhost:8080/api/help/publish
+Content-Type: application/json
+
+{
+  "title": "测试帖子",
+  "content": "测试内容",
+  "category": "经验分享",
+  "city": "null",
+  "username": "testuser001"
+}
+
+### 查询帖子列表
+GET http://localhost:8080/api/help/list?page=0&size=12
+
+### TC-COMMENT-001: 发表主评论(假设帖子ID为1)
+POST http://localhost:8080/api/help/comment
+Content-Type: application/json
+
+{
+  "postId": 1,
+  "content": "很好的帖子",
+  "username": "testuser002"
+}
+
+### TC-COMMENT-002: 回复某条评论(假设评论ID为1)
+POST http://localhost:8080/api/help/comment
+Content-Type: application/json
+
+{
+  "postId": 1,
+  "content": "同意楼上",
+  "username": "testuser003",
+  "parentId": 1
+}
+
+### TC-COMMENT-003: 获取树形评论列表
+GET http://localhost:8080/api/help/comments/1
+
+### TC-COMMENT-004: 评论者删除自己的评论
+DELETE http://localhost:8080/api/help/comment/1?username=testuser002
+
+### TC-COMMENT-005: 非评论者尝试删除(应返回400)
+DELETE http://localhost:8080/api/help/comment/2?username=testuser003
+
+### TC-COMMENT-006: 删除不存在的评论(应返回400)
+DELETE http://localhost:8080/api/help/comment/99999?username=testuser001
+
+### TC-POSTDEL-001: 帖子作者删除帖子
+DELETE http://localhost:8080/api/help/post/1?username=testuser001
+
+### TC-POSTDEL-002: 管理员删除帖子
+DELETE http://localhost:8080/api/help/post/2?username=admin001
+
+### TC-POSTDEL-003: 普通用户删除他人帖子(应返回403)
+DELETE http://localhost:8080/api/help/post/3?username=testuser002
+
+### ========================================
+### 6.2.5 用户社交模块测试
+### ========================================
+
+### 注册两个用户用于测试关注
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "user001",
+  "password": "123456",
+  "realName": "用户1",
+  "phone": "13800138020"
+}
+
+###
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "username": "user002",
+  "password": "123456",
+  "realName": "用户2",
+  "phone": "13800138021"
+}
+
+### TC-FOLLOW-001: 首次关注
+POST http://localhost:8080/api/follow/toggle
+Content-Type: application/json
+
+{
+  "followerUsername": "user001",
+  "followingUsername": "user002"
+}
+
+### TC-FOLLOW-002: 取消关注
+POST http://localhost:8080/api/follow/toggle
+Content-Type: application/json
+
+{
+  "followerUsername": "user001",
+  "followingUsername": "user002"
+}
+
+### TC-FOLLOW-003: 关注自己(应返回400)
+POST http://localhost:8080/api/follow/toggle
+Content-Type: application/json
+
+{
+  "followerUsername": "user001",
+  "followingUsername": "user001"
+}
+
+### TC-FOLLOW-004: 查询粉丝列表
+GET http://localhost:8080/api/follow/followers?username=user002&page=0&size=50
+
+### TC-FOLLOW-005: 查询关注数量
+GET http://localhost:8080/api/follow/following/count?username=user001
+
+### TC-FOLLOW-006: 关注者不存在(应返回400)
+POST http://localhost:8080/api/follow/toggle
+Content-Type: application/json
+
+{
+  "followerUsername": "nonexistent",
+  "followingUsername": "user002"
+}
+
+### TC-MSG-001: 发送文字私信
+POST http://localhost:8080/api/message/send
+Content-Type: application/json
+
+{
+  "senderUsername": "user001",
+  "receiverUsername": "user002",
+  "content": "你好"
+}
+
+### TC-MSG-002: 发送带图片的私信
+POST http://localhost:8080/api/message/send
+Content-Type: application/json
+
+{
+  "senderUsername": "user001",
+  "receiverUsername": "user002",
+  "content": "看这张图片",
+  "imageUrl": "http://example.com/img.jpg"
+}
+
+### TC-MSG-003: 接收者查看私信列表
+GET http://localhost:8080/api/message/list?username=user002&page=0&size=20
+
+### TC-NOTIF-001: 查询未读数量
+GET http://localhost:8080/api/notification/unread-count?username=user001
+
+### TC-NOTIF-002: 查询通知列表
+GET http://localhost:8080/api/notification/list?username=user001&page=0&size=10
+
+### TC-NOTIF-003: 标记单个通知为已读(假设通知ID为1)
+POST http://localhost:8080/api/notification/read/1?username=user001
+
+### TC-NOTIF-004: 全部已读
+POST http://localhost:8080/api/notification/read-all?username=user001
+
+### ========================================
+### 6.2.6 管理员统计功能测试
+### ========================================
+
+### TC-STATS-001: 管理员查询统计数据
+GET http://localhost:8080/api/admin/statistics?username=admin001
+
+### TC-STATS-002: 非管理员尝试查询(应返回400)
+GET http://localhost:8080/api/admin/statistics?username=testuser001
+
+### TC-STATS-003: 用户不存在(应返回400)
+GET http://localhost:8080/api/admin/statistics?username=nonexistent
+
+### ========================================
+### 6.3.2 异常处理测试
+### ========================================
+
+### TC-EXC-002: 网络超时(后端服务未启动时测试)
+GET http://localhost:8080/api/pet/1
+
+
+### ========================================
+### 其他常用查询接口测试
+### ========================================
+
+### 查询我的宠物列表
+GET http://localhost:8080/api/pet/my-pets?username=testuser001&page=0&size=8
+
+### 查询我的申请列表
+GET http://localhost:8080/api/adoption/my-applications?username=adopter001&page=0&size=10
+
+### 查询我的帖子列表
+GET http://localhost:8080/api/help/my-posts?username=testuser001&page=0&size=10
+
+### 查询用户资料
+GET http://localhost:8080/api/user/profile/testuser001
+
+### 检查是否已关注
+GET http://localhost:8080/api/follow/check?followerUsername=user001&followingUsername=user002

@@ -18,7 +18,6 @@ public class WebConfig implements WebMvcConfigurer {
 
     /**
      * 添加静态资源处理器，将 URL 请求映射到本地文件系统
-     * @param registry 资源处理器注册表，用于注册资源映射规则
      */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

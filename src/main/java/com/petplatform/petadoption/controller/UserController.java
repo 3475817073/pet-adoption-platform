@@ -28,6 +28,17 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
+            if (user.getPassword() == null || user.getPassword().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("密码不能为空");
+            }
+
+            if (user.getPassword().length() < 6) {
+                return ResponseEntity.badRequest().body("密码长度至少6位");
+            }
+
+            if (userService.existsByUsername(user.getUsername())) {
+                return ResponseEntity.badRequest().body("用户名已存在！");
+            }
             if (userService.existsByUsername(user.getUsername())) {
                 return ResponseEntity.badRequest().body("用户名已存在！");
             }
@@ -61,6 +72,10 @@ public class UserController {
         try {
             String username = credentials.get("username");
             String inputPassword = credentials.get("password");
+
+            if (inputPassword == null || inputPassword.trim().isEmpty()) {
+                return ResponseEntity.status(401).body("密码不能为空");
+            }
 
             User user = userService.findByUsername(username);
             if (user == null) {
@@ -185,6 +200,11 @@ public class UserController {
         if (request.containsKey("newPassword")) {
             String oldPassword = request.get("oldPassword");
             String newPassword = request.get("newPassword");
+
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("新密码不能为空");
+            }
+
             if (oldPassword != null && !passwordEncoder.matches(oldPassword, user.getPassword())) {
                 return ResponseEntity.status(401).body("原密码错误");
             }
