@@ -31,23 +31,14 @@ public class NotificationController {
      */
     @GetMapping("/list")
     public ResponseEntity<?> getNotifications(
-            @RequestParam String username,
-            @RequestParam(defaultValue = "0") int page,
+            @RequestParam String username, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        try {
-            User user = userService.findByUsername(username);
-            if (user == null) {
-                return ResponseEntity.badRequest().body("用户不存在");
-            }
-            
+        try {User user = userService.findByUsername(username);
+            if (user == null) {return ResponseEntity.badRequest().body("用户不存在");}
             Pageable pageable = PageRequest.of(page, size);
             Page<Notification> notifications = notificationService.getUserNotifications(user.getId(), pageable);
-            
             return ResponseEntity.ok(notifications);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
+        } catch (Exception e) {return ResponseEntity.badRequest().body(e.getMessage());}}
     
     /**
      * 统计未读通知数量
